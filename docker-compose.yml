@@ -34,6 +34,8 @@ services:
     container_name: anibt-speed-pbh
     environment:
       - TZ=Asia/Shanghai
+    ports:
+      - "127.0.0.1:9898:9898"
     volumes:
       - ./peerbanhelper/data:/app/data
     networks:

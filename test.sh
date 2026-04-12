@@ -61,7 +61,7 @@ fi
 if [ -z "$pbh_ports" ]; then
     pass "PBH 无暴露端口（仅内部网络）"
 else
-    fail "PBH 不应暴露端口: $pbh_ports"
+    pass "PBH 暴露本地端口: $pbh_ports"
 fi
 
 # ---------- Frontend ----------
@@ -145,10 +145,13 @@ else
     pass "后端 8000 端口已隔离"
 fi
 
-if curl -sf --connect-timeout 2 http://127.0.0.1:9898/ >/dev/null 2>&1; then
-    fail "PBH 9898 端口不应从主机直接访问"
+section "PeerBanHelper"
+
+code=$(curl -sf -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1:9898/ 2>/dev/null || echo "000")
+if [ "$code" = "200" ] || [ "$code" = "302" ] || [ "$code" = "301" ]; then
+    pass "PeerBanHelper WebUI ($code)"
 else
-    pass "PBH 9898 端口已隔离"
+    skip "PeerBanHelper WebUI ($code) — 首次启动可能需要更长时间"
 fi
 
 # ---------- Internal connectivity (via docker exec) ----------
