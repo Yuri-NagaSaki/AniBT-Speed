@@ -4,13 +4,14 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: anibt-speed-backend
-    network_mode: host
     environment:
       - SECRET_KEY=${SECRET_KEY:-change-me}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       - TZ=Asia/Shanghai
     volumes:
       - ./backend/data:/app/data
+    networks:
+      - anibt
     restart: unless-stopped
 
   frontend:
@@ -18,21 +19,27 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: anibt-speed-frontend
-    network_mode: host
     environment:
       - TZ=Asia/Shanghai
+    ports:
+      - "127.0.0.1:6868:6868"
     depends_on:
       - backend
+    networks:
+      - anibt
     restart: unless-stopped
 
   peerbanhelper:
     image: ghostchu/peerbanhelper:latest
     container_name: anibt-speed-pbh
-    network_mode: host
     environment:
       - TZ=Asia/Shanghai
     volumes:
       - ./peerbanhelper/data:/app/data
-      - /etc/localtime:/etc/localtime:ro
-      - /etc/timezone:/etc/timezone:ro
+    networks:
+      - anibt
     restart: unless-stopped
+
+networks:
+  anibt:
+    driver: bridge

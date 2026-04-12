@@ -58,15 +58,7 @@ build_and_start() {
 verify_services() {
     local all_ok=true
 
-    # Backend
-    if curl -sf http://127.0.0.1:8000/api/health >/dev/null 2>&1; then
-        info "后端 (FastAPI)     ✓ 运行中"
-    else
-        error "后端 (FastAPI)     ✗ 未响应"
-        all_ok=false
-    fi
-
-    # Frontend
+    # Frontend (the only externally exposed service)
     if curl -sf http://127.0.0.1:6868/ >/dev/null 2>&1; then
         info "前端 (Nginx)       ✓ 运行中"
     else
@@ -74,11 +66,21 @@ verify_services() {
         all_ok=false
     fi
 
-    # PeerBanHelper
-    if curl -sf http://127.0.0.1:9898/ >/dev/null 2>&1; then
+    # Backend (via Nginx proxy)
+    if curl -sf http://127.0.0.1:6868/api/health >/dev/null 2>&1; then
+        info "后端 (FastAPI)     ✓ 运行中 (通过 Nginx 代理)"
+    else
+        error "后端 (FastAPI)     ✗ 未响应"
+        all_ok=false
+    fi
+
+    # PeerBanHelper (internal, check via docker)
+    local pbh_status
+    pbh_status=$(docker inspect -f '{{.State.Status}}' anibt-speed-pbh 2>/dev/null || echo "not_found")
+    if [ "$pbh_status" = "running" ]; then
         info "PeerBanHelper      ✓ 运行中"
     else
-        warn "PeerBanHelper      △ 未响应 (首次启动需要较长时间初始化)"
+        warn "PeerBanHelper      △ 状态: $pbh_status (首次启动需要较长时间初始化)"
     fi
 
     if [ "$all_ok" = true ]; then

@@ -31,21 +31,65 @@ for svc in anibt-speed-backend anibt-speed-frontend anibt-speed-pbh; do
     fi
 done
 
-# ---------- Backend API ----------
-section "后端 API"
+# ---------- Network ----------
+section "网络"
+
+network=$(docker network inspect anibt-speed_anibt -f '{{.Name}}' 2>/dev/null || echo "not_found")
+if [ "$network" != "not_found" ]; then
+    pass "Docker 网络 anibt-speed_anibt 存在"
+else
+    fail "Docker 网络 anibt-speed_anibt 不存在"
+fi
+
+# Check only frontend exposes ports to host
+frontend_ports=$(docker inspect -f '{{range $p, $conf := .NetworkSettings.Ports}}{{$p}} {{end}}' anibt-speed-frontend 2>/dev/null || echo "")
+backend_ports=$(docker inspect -f '{{range $p, $conf := .HostConfig.PortBindings}}{{$p}} {{end}}' anibt-speed-backend 2>/dev/null || echo "")
+pbh_ports=$(docker inspect -f '{{range $p, $conf := .HostConfig.PortBindings}}{{$p}} {{end}}' anibt-speed-pbh 2>/dev/null || echo "")
+
+if [ -n "$frontend_ports" ]; then
+    pass "前端暴露端口: $frontend_ports"
+else
+    skip "前端端口映射未检测到"
+fi
+
+if [ -z "$backend_ports" ]; then
+    pass "后端无暴露端口（仅内部网络）"
+else
+    fail "后端不应暴露端口: $backend_ports"
+fi
+
+if [ -z "$pbh_ports" ]; then
+    pass "PBH 无暴露端口（仅内部网络）"
+else
+    fail "PBH 不应暴露端口: $pbh_ports"
+fi
+
+# ---------- Frontend ----------
+section "前端（唯一对外端口 6868）"
+
+code=$(curl -sf -o /dev/null -w '%{http_code}' http://127.0.0.1:6868/ 2>/dev/null || echo "000")
+if [ "$code" = "200" ]; then
+    pass "GET / ($code)"
+else
+    fail "GET / ($code)"
+fi
+
+# ---------- Backend API (via Nginx proxy) ----------
+section "后端 API（通过 Nginx 代理）"
 
 # Health
-if curl -sf http://127.0.0.1:8000/api/health >/dev/null 2>&1; then
-    pass "GET /api/health"
+code=$(curl -sf -o /dev/null -w '%{http_code}' http://127.0.0.1:6868/api/health 2>/dev/null || echo "000")
+if [ "$code" = "200" ]; then
+    pass "GET /api/health ($code)"
 else
-    fail "GET /api/health"
+    fail "GET /api/health ($code)"
 fi
 
 # Auth - login
 source .env 2>/dev/null || true
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}"
 
-TOKEN=$(curl -sf -X POST http://127.0.0.1:8000/api/auth/login \
+TOKEN=$(curl -sf -X POST http://127.0.0.1:6868/api/auth/login \
     -H "Content-Type: application/json" \
     -d "{\"password\": \"${ADMIN_PASSWORD}\"}" 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))" 2>/dev/null || echo "")
 
@@ -58,51 +102,33 @@ fi
 
 AUTH="Authorization: Bearer $TOKEN"
 
-# Instances
 if [ -n "$TOKEN" ]; then
-    code=$(curl -sf -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/instances -H "$AUTH" 2>/dev/null || echo "000")
-    if [ "$code" = "200" ]; then
-        pass "GET /api/instances ($code)"
-    else
-        fail "GET /api/instances ($code)"
-    fi
-fi
+    for ep in instances rss; do
+        code=$(curl -sf -o /dev/null -w '%{http_code}' "http://127.0.0.1:6868/api/$ep" -H "$AUTH" 2>/dev/null || echo "000")
+        if [ "$code" = "200" ]; then
+            pass "GET /api/$ep ($code)"
+        else
+            fail "GET /api/$ep ($code)"
+        fi
+    done
 
-# RSS feeds
-if [ -n "$TOKEN" ]; then
-    code=$(curl -sf -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/rss -H "$AUTH" 2>/dev/null || echo "000")
-    if [ "$code" = "200" ]; then
-        pass "GET /api/rss ($code)"
-    else
-        fail "GET /api/rss ($code)"
-    fi
-fi
-
-# Settings
-if [ -n "$TOKEN" ]; then
     for ep in space queue rate-limit telegram; do
-        code=$(curl -sf -o /dev/null -w '%{http_code}' "http://127.0.0.1:8000/api/settings/$ep" -H "$AUTH" 2>/dev/null || echo "000")
+        code=$(curl -sf -o /dev/null -w '%{http_code}' "http://127.0.0.1:6868/api/settings/$ep" -H "$AUTH" 2>/dev/null || echo "000")
         if [ "$code" = "200" ]; then
             pass "GET /api/settings/$ep ($code)"
         else
             fail "GET /api/settings/$ep ($code)"
         fi
     done
-fi
 
-# Stats
-if [ -n "$TOKEN" ]; then
-    code=$(curl -sf -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/stats/traffic -H "$AUTH" 2>/dev/null || echo "000")
+    code=$(curl -sf -o /dev/null -w '%{http_code}' "http://127.0.0.1:6868/api/stats/traffic" -H "$AUTH" 2>/dev/null || echo "000")
     if [ "$code" = "200" ]; then
         pass "GET /api/stats/traffic ($code)"
     else
         fail "GET /api/stats/traffic ($code)"
     fi
-fi
 
-# Logs
-if [ -n "$TOKEN" ]; then
-    code=$(curl -sf -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/stats/logs -H "$AUTH" 2>/dev/null || echo "000")
+    code=$(curl -sf -o /dev/null -w '%{http_code}' "http://127.0.0.1:6868/api/stats/logs" -H "$AUTH" 2>/dev/null || echo "000")
     if [ "$code" = "200" ]; then
         pass "GET /api/stats/logs ($code)"
     else
@@ -110,32 +136,48 @@ if [ -n "$TOKEN" ]; then
     fi
 fi
 
-# ---------- Frontend ----------
-section "前端"
+# ---------- Backend not accessible directly ----------
+section "端口隔离验证"
 
-code=$(curl -sf -o /dev/null -w '%{http_code}' http://127.0.0.1:6868/ 2>/dev/null || echo "000")
-if [ "$code" = "200" ]; then
-    pass "GET / ($code)"
+if curl -sf --connect-timeout 2 http://127.0.0.1:8000/api/health >/dev/null 2>&1; then
+    fail "后端 8000 端口不应从主机直接访问"
 else
-    fail "GET / ($code)"
+    pass "后端 8000 端口已隔离"
 fi
 
-# API proxy
-code=$(curl -sf -o /dev/null -w '%{http_code}' http://127.0.0.1:6868/api/health 2>/dev/null || echo "000")
-if [ "$code" = "200" ]; then
-    pass "Nginx API 代理 /api/health ($code)"
+if curl -sf --connect-timeout 2 http://127.0.0.1:9898/ >/dev/null 2>&1; then
+    fail "PBH 9898 端口不应从主机直接访问"
 else
-    fail "Nginx API 代理 /api/health ($code)"
+    pass "PBH 9898 端口已隔离"
 fi
 
-# ---------- PeerBanHelper ----------
-section "PeerBanHelper"
+# ---------- Internal connectivity (via docker exec) ----------
+section "内部网络连通性"
 
-code=$(curl -sf -o /dev/null -w '%{http_code}' http://127.0.0.1:9898/ 2>/dev/null || echo "000")
-if [ "$code" = "200" ] || [ "$code" = "302" ] || [ "$code" = "301" ]; then
-    pass "PeerBanHelper WebUI ($code)"
+backend_health=$(docker exec anibt-speed-frontend wget -qO- http://backend:8000/api/health 2>/dev/null && echo "ok" || echo "fail")
+if [ "$backend_health" = "ok" ]; then
+    pass "frontend -> backend:8000 连通"
 else
-    skip "PeerBanHelper WebUI ($code) — 首次启动可能需要更长时间"
+    # Nginx proxy already tested above; this is just a direct connectivity check
+    # If proxy works, internal network is fine
+    if curl -sf http://127.0.0.1:6868/api/health >/dev/null 2>&1; then
+        pass "frontend -> backend:8000 连通 (通过代理验证)"
+    else
+        fail "frontend -> backend:8000 不通"
+    fi
+fi
+
+pbh_status=$(docker exec anibt-speed-backend curl -sf --connect-timeout 3 http://peerbanhelper:9898/ 2>/dev/null && echo "ok" || echo "fail")
+if [ "$pbh_status" = "ok" ]; then
+    pass "backend -> peerbanhelper:9898 连通"
+else
+    # Try with wget or python as fallback
+    pbh_status2=$(docker exec anibt-speed-backend python3 -c "import urllib.request; urllib.request.urlopen('http://peerbanhelper:9898/', timeout=3); print('ok')" 2>/dev/null || echo "fail")
+    if [ "$pbh_status2" = "ok" ]; then
+        pass "backend -> peerbanhelper:9898 连通"
+    else
+        skip "backend -> peerbanhelper:9898 (PBH 可能仍在初始化)"
+    fi
 fi
 
 # ---------- Timezone ----------
