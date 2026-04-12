@@ -6,13 +6,8 @@ services:
     container_name: anibt-speed-backend
     network_mode: host
     environment:
-      - SECRET_KEY=${SECRET_KEY}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      - QBT_URL=${QBT_URL}
-      - QBT_USERNAME=${QBT_USERNAME}
-      - QBT_PASSWORD=${QBT_PASSWORD}
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - SECRET_KEY=${SECRET_KEY:-change-me}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
     volumes:
       - ./backend/data:/app/data
     restart: unless-stopped
