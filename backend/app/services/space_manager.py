@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import QBTInstance, PolicySettings, ActionLog
 from app.services.qbt_client import get_qbt_client
+from app.services.telegram_notifier import send_notification
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,13 @@ def check_space():
             return
 
         logger.info(f"Space usage {used_percent:.1f}% exceeds threshold {config['threshold_percent']}%, cleaning up...")
+
+        send_notification(
+            f"⚠️ <b>空间告警</b>\n"
+            f"磁盘使用率: {used_percent:.1f}%\n"
+            f"阈值: {config['threshold_percent']}%\n"
+            f"开始清理..."
+        )
 
         instances = db.query(QBTInstance).filter_by(enabled=True).all()
         for inst in instances:
@@ -100,6 +108,13 @@ def _cleanup_instance(db: Session, instance: QBTInstance, config: dict):
                 details=f"Space cleanup: ratio={t.ratio:.2f}, age={(now - t.added_on) / 3600:.1f}h",
             ))
             db.commit()
+
+            send_notification(
+                f"🗑 <b>空间清理</b>\n"
+                f"实例: {instance.name}\n"
+                f"删除: {t.name}\n"
+                f"分享率: {t.ratio:.2f} · 年龄: {(now - t.added_on) / 3600:.1f}h"
+            )
 
     except Exception as e:
         logger.error(f"Cleanup error for instance {instance.name}: {e}")

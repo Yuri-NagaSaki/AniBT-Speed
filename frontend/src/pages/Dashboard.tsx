@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { instancesApi, statsApi } from '../api/client'
 import StatusCard from '../components/StatusCard'
 import { Upload, Download, Activity, Zap, Server, TrendingUp } from 'lucide-react'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 function formatBytes(bytes: number): string {
   if (!bytes || bytes === 0) return '0 B'
@@ -37,6 +38,18 @@ export default function Dashboard() {
     queryFn: instancesApi.list,
     refetchInterval: 5000,
   })
+
+  const { data: traffic = [] } = useQuery<any[]>({
+    queryKey: ['traffic'],
+    queryFn: () => statsApi.traffic(),
+    refetchInterval: 60000,
+  })
+
+  const chartData = traffic.map((r: any) => ({
+    time: new Date(r.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+    upload: +(r.uploaded / 1024 / 1024).toFixed(1),
+    download: +(r.downloaded / 1024 / 1024).toFixed(1),
+  }))
 
   const { data: summary, isLoading: loadingSummary } = useQuery({
     queryKey: ['stats-summary'],
@@ -164,6 +177,79 @@ export default function Dashboard() {
               icon={<Activity size={16} />}
               accent="var(--warning)"
             />
+          </div>
+        </div>
+      )}
+
+      {/* Traffic Chart */}
+      {chartData.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xs font-semibold tracking-widest uppercase mb-4 px-1" style={{ color: 'var(--text-muted)' }}>
+            流量趋势
+          </h2>
+          <div
+            className="rounded-2xl p-6"
+            style={{
+              background: 'var(--bg-card)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid var(--border)',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+            }}
+          >
+            <ResponsiveContainer width="100%" height={260}>
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="uploadGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--success)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--success)" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="downloadGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--accent)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis
+                  dataKey="time"
+                  stroke="var(--text-muted)"
+                  tick={{ fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  stroke="var(--text-muted)"
+                  tick={{ fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => `${v} MB`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    color: 'var(--text-primary)',
+                  }}
+                  formatter={(value: any, name: any) => [`${value} MB`, name === 'upload' ? '上传' : '下载']}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="upload"
+                  stroke="var(--success)"
+                  strokeWidth={2}
+                  fill="url(#uploadGrad)"
+                  dot={false}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="download"
+                  stroke="var(--accent)"
+                  strokeWidth={2}
+                  fill="url(#downloadGrad)"
+                  dot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
       )}

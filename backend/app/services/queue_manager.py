@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import QBTInstance, PolicySettings, ActionLog
 from app.services.qbt_client import get_qbt_client
+from app.services.telegram_notifier import send_notification
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,12 @@ def _manage_queue(db: Session, instance: QBTInstance, config: dict):
                     torrent_name=t.name,
                     details="No leechers",
                 ))
+                send_notification(
+                    f"⏸ <b>队列暂停</b>\n"
+                    f"实例: {instance.name}\n"
+                    f"种子: {t.name}\n"
+                    f"原因: 无下载者"
+                )
 
             elif is_paused and t.num_leechs > config["resume_when_leechers_gt"]:
                 client.resume_torrent(t.hash)
@@ -83,6 +90,12 @@ def _manage_queue(db: Session, instance: QBTInstance, config: dict):
                     torrent_name=t.name,
                     details=f"Leechers: {t.num_leechs}",
                 ))
+                send_notification(
+                    f"▶️ <b>队列恢复</b>\n"
+                    f"实例: {instance.name}\n"
+                    f"种子: {t.name}\n"
+                    f"下载者: {t.num_leechs}"
+                )
 
         db.commit()
     except Exception as e:
