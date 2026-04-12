@@ -8,6 +8,7 @@ services:
     environment:
       - SECRET_KEY=${SECRET_KEY:-change-me}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - TZ=Asia/Shanghai
     volumes:
       - ./backend/data:/app/data
     restart: unless-stopped
@@ -18,6 +19,8 @@ services:
       dockerfile: Dockerfile
     container_name: anibt-speed-frontend
     network_mode: host
+    environment:
+      - TZ=Asia/Shanghai
     depends_on:
       - backend
     restart: unless-stopped
@@ -30,4 +33,6 @@ services:
       - TZ=Asia/Shanghai
     volumes:
       - ./peerbanhelper/data:/app/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     restart: unless-stopped
