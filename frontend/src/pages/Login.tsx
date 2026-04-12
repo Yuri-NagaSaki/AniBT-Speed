@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { authApi } from '../api/client'
-import { Lock, Zap, AlertCircle, Loader2 } from 'lucide-react'
+import { Lock, AlertCircle, Loader2 } from 'lucide-react'
 
 export default function Login() {
   const [password, setPassword] = useState('')
@@ -24,101 +24,84 @@ export default function Login() {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: 'var(--bg-primary)' }}
+      style={{ background: 'var(--ctp-base)' }}
     >
       <div
-        className="relative w-full max-w-sm rounded-3xl p-8 overflow-hidden"
         style={{
-          background: 'var(--bg-card)',
-          backdropFilter: 'blur(24px)',
-          border: '1px solid var(--border)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
+          width: '100%',
+          maxWidth: '360px',
+          background: 'var(--ctp-surface0)',
+          border: '1px solid var(--ctp-surface1)',
+          borderRadius: '12px',
+          padding: '24px',
+          animation: 'fadeIn 0.3s ease-out',
         }}
       >
-        {/* Decorative orbs */}
-        <div
-          className="absolute -top-16 -right-16 w-48 h-48 rounded-full opacity-20 blur-3xl pointer-events-none"
-          style={{ background: 'radial-gradient(circle, var(--accent) 0%, transparent 70%)' }}
-        />
-        <div
-          className="absolute -bottom-12 -left-12 w-36 h-36 rounded-full opacity-15 blur-3xl pointer-events-none"
-          style={{ background: 'radial-gradient(circle, var(--accent-secondary) 0%, transparent 70%)' }}
-        />
+        <div className="text-center mb-6">
+          <h1 className="text-xl font-semibold" style={{ color: 'var(--ctp-text)' }}>
+            AniBT-Speed
+          </h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--ctp-subtext0)' }}>
+            种群加速管理平台
+          </p>
+        </div>
 
-        <div className="relative">
-          {/* Logo */}
-          <div className="flex flex-col items-center mb-8">
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-              style={{
-                background: 'linear-gradient(135deg, var(--accent), var(--accent-secondary))',
-                boxShadow: '0 8px 24px var(--accent-glow)',
-              }}
-            >
-              <Zap size={28} className="text-white" />
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-xs font-medium mb-2" style={{ color: 'var(--ctp-subtext0)' }}>
+              管理密码
+            </label>
+            <div className="relative">
+              <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--ctp-overlay1)' }} />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="请输入密码"
+                autoFocus
+                className="w-full outline-none transition-colors duration-150"
+                style={{
+                  paddingLeft: '36px',
+                  paddingRight: '14px',
+                  paddingTop: '10px',
+                  paddingBottom: '10px',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  background: 'var(--ctp-surface0)',
+                  border: '1px solid var(--ctp-surface1)',
+                  color: 'var(--ctp-text)',
+                }}
+                onFocus={(e) => { e.target.style.borderColor = 'var(--ctp-mauve)' }}
+                onBlur={(e) => { e.target.style.borderColor = 'var(--ctp-surface1)' }}
+              />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-              AniBT-Speed
-            </h1>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-              种群加速管理平台
-            </p>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold mb-2 tracking-wide uppercase" style={{ color: 'var(--text-secondary)' }}>
-                管理密码
-              </label>
-              <div className="relative">
-                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="请输入密码"
-                  autoFocus
-                  className="w-full pl-11 pr-4 py-3 rounded-xl text-sm outline-none transition-all duration-200"
-                  style={{
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text-primary)',
-                  }}
-                  onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-glow)' }}
-                  onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
-                />
-              </div>
+          {error && (
+            <div className="flex items-center gap-2 mb-4 text-sm" style={{ color: 'var(--ctp-red)' }}>
+              <AlertCircle size={14} />
+              {error}
             </div>
+          )}
 
-            {error && (
-              <div
-                className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
-                style={{
-                  background: 'rgba(239,68,68,0.1)',
-                  border: '1px solid rgba(239,68,68,0.2)',
-                  color: 'var(--danger)',
-                }}
-              >
-                <AlertCircle size={14} />
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading || !password}
-              className="w-full py-3 rounded-xl text-sm font-semibold text-white cursor-pointer transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
-              style={{
-                background: 'var(--gradient-accent)',
-                boxShadow: '0 4px 16px var(--accent-glow)',
-              }}
-            >
-              {loading ? <Loader2 size={16} className="animate-spin" /> : <Lock size={16} />}
-              {loading ? '登录中...' : '登 录'}
-            </button>
-          </form>
-        </div>
+          <button
+            type="submit"
+            disabled={loading || !password}
+            className="w-full flex items-center justify-center gap-2 cursor-pointer transition-opacity duration-150 disabled:opacity-40"
+            style={{
+              padding: '10px 16px',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: 500,
+              background: 'var(--ctp-mauve)',
+              color: 'var(--ctp-crust)',
+              border: 'none',
+            }}
+          >
+            {loading ? <Loader2 size={14} className="animate-spin" /> : null}
+            {loading ? '登录中...' : '登 录'}
+          </button>
+        </form>
       </div>
     </div>
   )
