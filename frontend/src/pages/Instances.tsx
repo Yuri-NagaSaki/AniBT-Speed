@@ -40,6 +40,9 @@ export default function Instances() {
 
   const [testResult, setTestResult] = useState<any>(null)
   const [testingId, setTestingId] = useState<number | null>(null)
+  const [formTestResult, setFormTestResult] = useState<any>(null)
+  const [formTesting, setFormTesting] = useState(false)
+
   const testMutation = useMutation({
     mutationFn: instancesApi.test,
     onSuccess: (data) => {
@@ -54,10 +57,26 @@ export default function Instances() {
     },
   })
 
+  const testConnectionMutation = useMutation({
+    mutationFn: instancesApi.testConnection,
+    onSuccess: (data) => {
+      setFormTestResult(data)
+      setFormTesting(false)
+      setTimeout(() => setFormTestResult(null), 5000)
+    },
+    onError: (err: any) => {
+      setFormTestResult({ success: false, error: err.message })
+      setFormTesting(false)
+      setTimeout(() => setFormTestResult(null), 5000)
+    },
+  })
+
   function resetForm() {
     setForm({ name: '', url: '', username: '', password: '', download_path: '' })
     setShowForm(false)
     setEditId(null)
+    setFormTestResult(null)
+    setFormTesting(false)
   }
 
   function handleEdit(inst: any) {
@@ -181,6 +200,20 @@ export default function Instances() {
               <div className="flex gap-3 justify-end pt-2">
                 <button
                   type="button"
+                  onClick={() => {
+                    setFormTesting(true)
+                    setFormTestResult(null)
+                    testConnectionMutation.mutate({ url: form.url, username: form.username, password: form.password })
+                  }}
+                  disabled={formTesting || !form.url}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all duration-200 disabled:opacity-40"
+                  style={{ color: 'var(--accent)', background: 'var(--bg-elevated)', border: '1px solid var(--accent)' }}
+                >
+                  {formTesting ? <Loader2 size={14} className="animate-spin" /> : <TestTube size={14} />}
+                  测试连接
+                </button>
+                <button
+                  type="button"
                   onClick={resetForm}
                   className="px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all duration-200"
                   style={{ color: 'var(--text-secondary)', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
@@ -196,6 +229,20 @@ export default function Instances() {
                   {(createMutation.isPending || updateMutation.isPending) ? '保存中...' : editId ? '保存修改' : '添加实例'}
                 </button>
               </div>
+
+              {formTestResult && (
+                <div
+                  className="mt-3 px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2"
+                  style={{
+                    background: formTestResult.success ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+                    border: `1px solid ${formTestResult.success ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                    color: formTestResult.success ? 'var(--success)' : 'var(--danger)',
+                  }}
+                >
+                  {formTestResult.success ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
+                  {formTestResult.success ? `连接成功 — qBittorrent ${formTestResult.version}` : `连接失败: ${formTestResult.error}`}
+                </div>
+              )}
             </form>
           </div>
         </div>

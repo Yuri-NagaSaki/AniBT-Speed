@@ -19,6 +19,8 @@ export const instancesApi = {
   update: (id: number, data: any) => request(`/instances/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => request(`/instances/${id}`, { method: 'DELETE' }),
   test: (id: number) => request<any>(`/instances/${id}/test`, { method: 'POST' }),
+  testConnection: (data: { url: string; username: string; password: string }) =>
+    request<any>('/instances/test-connection', { method: 'POST', body: JSON.stringify(data) }),
   torrents: (id: number) => request<any[]>(`/instances/${id}/torrents`),
 }
 

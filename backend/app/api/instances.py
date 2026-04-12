@@ -106,6 +106,20 @@ def delete_instance(instance_id: int, db: Session = Depends(get_db)):
     return {"ok": True}
 
 
+class ConnectionTest(BaseModel):
+    url: str
+    username: str
+    password: str
+
+
+@router.post("/test-connection")
+def test_connection(body: ConnectionTest):
+    """Test connection to a qBittorrent instance without saving it."""
+    from app.services.qbt_client import QBTClient
+    client = QBTClient(body.url, body.username, body.password)
+    return client.test_connection()
+
+
 @router.post("/{instance_id}/test")
 def test_instance(instance_id: int, db: Session = Depends(get_db)):
     inst = db.query(QBTInstance).get(instance_id)
