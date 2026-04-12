@@ -5,9 +5,7 @@ interface StatusCardProps {
   value: string | number
   subtitle?: string
   color?: string
-  /** @deprecated kept for backward compat — ignored */
   icon?: ReactNode
-  /** @deprecated use color instead */
   accent?: string
 }
 
@@ -15,26 +13,34 @@ export default function StatusCard({ title, value, subtitle, color, accent }: St
   const tint = color ?? accent
 
   return (
-    <div className="py-4" style={{ borderBottom: '1px solid var(--ctp-surface0)' }}>
-      <span
-        className="text-[11px] font-medium tracking-widest uppercase block mb-2"
-        style={{ color: 'var(--ctp-overlay1)' }}
-      >
+    <div style={{ padding: '24px 0' }}>
+      <div style={{
+        fontSize: 11,
+        fontWeight: 500,
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.1em',
+        color: 'var(--ctp-overlay1)',
+        marginBottom: 12,
+      }}>
         {title}
-      </span>
-      <span
-        className="text-2xl font-semibold tracking-tight block"
-        style={{ color: tint ?? 'var(--ctp-text)' }}
-      >
+      </div>
+      <div style={{
+        fontSize: 28,
+        fontWeight: 600,
+        letterSpacing: '-0.03em',
+        lineHeight: 1.2,
+        color: tint ?? 'var(--ctp-text)',
+      }}>
         {value}
-      </span>
+      </div>
       {subtitle && (
-        <span
-          className="text-xs block mt-1"
-          style={{ color: 'var(--ctp-overlay0)' }}
-        >
+        <div style={{
+          fontSize: 12,
+          color: 'var(--ctp-overlay0)',
+          marginTop: 8,
+        }}>
           {subtitle}
-        </span>
+        </div>
       )}
     </div>
   )

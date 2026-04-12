@@ -2,15 +2,8 @@ import type { ReactNode } from 'react'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { clearToken } from '../api/client'
 import {
-  LayoutDashboard,
-  Server,
-  Rss,
-  HardDrive,
-  ListOrdered,
-  Gauge,
-  MessageSquare,
-  ScrollText,
-  LogOut,
+  LayoutDashboard, Server, Rss, HardDrive,
+  ListOrdered, Gauge, MessageSquare, ScrollText, LogOut,
 } from 'lucide-react'
 
 const navItems = [
@@ -28,61 +21,66 @@ export default function Layout({ children }: { children: ReactNode }) {
   const location = useLocation()
   const navigate = useNavigate()
 
-  function handleLogout() {
-    clearToken()
-    navigate({ to: '/login' })
-  }
-
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--ctp-base)' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--ctp-base)' }}>
       {/* Sidebar */}
-      <aside
-        className="w-[240px] shrink-0 flex flex-col"
-        style={{ background: 'var(--ctp-mantle)' }}
-      >
+      <aside style={{
+        width: 280,
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'var(--ctp-mantle)',
+        borderRight: '1px solid var(--ctp-surface0)',
+      }}>
         {/* Logo */}
-        <div className="px-5 pt-6 pb-5">
-          <h1
-            className="text-[15px] font-semibold tracking-tight"
-            style={{ color: 'var(--ctp-text)' }}
-          >
+        <div style={{ padding: '36px 28px 40px' }}>
+          <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--ctp-text)', letterSpacing: '-0.02em' }}>
             AniBT-Speed
-          </h1>
-          <p
-            className="text-[11px] mt-0.5"
-            style={{ color: 'var(--ctp-subtext0)' }}
-          >
-            种群加速
-          </p>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--ctp-overlay1)', marginTop: 6, letterSpacing: '0.04em' }}>
+            种群加速管理
+          </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 py-2 px-3 space-y-0.5 overflow-y-auto">
+        <nav style={{ flex: 1, padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto' }}>
           {navItems.map((item) => {
-            const isActive = location.pathname === item.path
+            const active = location.pathname === item.path
             return (
               <button
                 key={item.path}
                 onClick={() => navigate({ to: item.path })}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors duration-150 cursor-pointer"
                 style={{
-                  background: isActive ? 'var(--ctp-surface0)' : 'transparent',
-                  color: isActive ? 'var(--ctp-mauve)' : 'var(--ctp-overlay1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14,
+                  padding: '12px 16px',
+                  borderRadius: 10,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  fontWeight: active ? 500 : 400,
+                  fontFamily: 'inherit',
+                  background: active ? 'var(--ctp-surface0)' : 'transparent',
+                  color: active ? 'var(--ctp-mauve)' : 'var(--ctp-overlay1)',
+                  transition: 'all 0.15s ease',
+                  textAlign: 'left',
+                  width: '100%',
                 }}
                 onMouseEnter={(e) => {
-                  if (!isActive) {
+                  if (!active) {
                     e.currentTarget.style.background = 'var(--ctp-surface0)'
-                    e.currentTarget.style.color = 'var(--ctp-text)'
+                    e.currentTarget.style.color = 'var(--ctp-subtext1)'
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (!isActive) {
+                  if (!active) {
                     e.currentTarget.style.background = 'transparent'
                     e.currentTarget.style.color = 'var(--ctp-overlay1)'
                   }
                 }}
               >
-                <item.icon size={16} />
+                <item.icon size={18} />
                 <span>{item.label}</span>
               </button>
             )
@@ -90,33 +88,31 @@ export default function Layout({ children }: { children: ReactNode }) {
         </nav>
 
         {/* Footer */}
-        <div className="px-5 pb-5 space-y-3">
-          {/* PBH status */}
-          <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--ctp-overlay1)' }}>
-            <span
-              className="w-1.5 h-1.5 rounded-full shrink-0"
-              style={{ background: 'var(--ctp-green)' }}
-            />
-            <span>PeerBanHelper</span>
+        <div style={{ padding: '24px 28px 32px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--ctp-overlay1)' }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ctp-green)', flexShrink: 0 }} />
+            PeerBanHelper
           </div>
-
-          {/* Logout */}
           <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 text-xs cursor-pointer transition-colors duration-150"
-            style={{ color: 'var(--ctp-overlay1)' }}
+            onClick={() => { clearToken(); navigate({ to: '/login' }) }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: 0,
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 13, color: 'var(--ctp-overlay1)', fontFamily: 'inherit',
+              transition: 'color 0.15s ease',
+            }}
             onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--ctp-text)' }}
             onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--ctp-overlay1)' }}
           >
-            <LogOut size={13} />
-            <span>退出登录</span>
+            <LogOut size={15} />
+            退出登录
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto" style={{ background: 'var(--ctp-base)' }}>
-        <div className="mx-auto max-w-[1200px] px-6 py-12 md:px-12">
+      {/* Main Content */}
+      <main style={{ flex: 1, overflowY: 'auto', background: 'var(--ctp-base)' }}>
+        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '56px 56px 80px' }}>
           {children}
         </div>
       </main>

@@ -10,6 +10,19 @@ function formatSpeed(bytes: number): string {
   return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`
 }
 
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '12px 16px',
+  borderRadius: 10,
+  fontSize: 14,
+  background: 'var(--ctp-mantle)',
+  border: '1px solid var(--ctp-surface1)',
+  color: 'var(--ctp-text)',
+  outline: 'none',
+  fontFamily: 'inherit',
+  transition: 'border-color 0.15s ease',
+}
+
 export default function Instances() {
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
@@ -99,114 +112,144 @@ export default function Instances() {
     testMutation.mutate(id)
   }
 
-  const inputStyle: React.CSSProperties = {
-    padding: '10px 14px',
-    borderRadius: '8px',
-    fontSize: '13px',
-    background: 'var(--ctp-surface0)',
-    border: '1px solid var(--ctp-surface1)',
-    color: 'var(--ctp-text)',
-  }
-
   return (
-    <div className="max-w-5xl mx-auto" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+    <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-12">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 48 }}>
         <div>
-          <h1 className="text-2xl font-semibold" style={{ color: 'var(--ctp-text)' }}>实例管理</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--ctp-subtext0)' }}>管理 qBittorrent 实例连接</p>
+          <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--ctp-text)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>
+            实例管理
+          </h1>
+          <p style={{ fontSize: 14, color: 'var(--ctp-subtext0)', marginTop: 8, lineHeight: 1.6 }}>
+            管理 qBittorrent 实例连接
+          </p>
         </div>
         <button
           onClick={() => { resetForm(); setShowForm(true) }}
-          className="flex items-center gap-2 cursor-pointer transition-opacity duration-150"
           style={{
-            padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
-            background: 'var(--ctp-mauve)', color: 'var(--ctp-crust)', border: 'none',
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '12px 24px', borderRadius: 10, border: 'none', cursor: 'pointer',
+            fontSize: 14, fontWeight: 500, fontFamily: 'inherit',
+            background: 'var(--ctp-mauve)', color: 'var(--ctp-crust)',
+            transition: 'opacity 0.15s ease',
           }}
           onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9' }}
           onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
         >
-          <Plus size={14} /> 添加实例
+          <Plus size={16} /> 添加实例
         </button>
       </div>
 
       {/* Add/Edit Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ animation: 'fadeIn 0.15s ease-out' }}>
-          <div className="absolute inset-0" style={{ background: 'rgba(17,17,27,0.7)' }} onClick={resetForm} />
-          <div
-            className="relative w-full max-w-xl mx-4"
-            style={{
-              background: 'var(--ctp-surface0)', border: '1px solid var(--ctp-surface1)',
-              borderRadius: '16px', padding: '24px', animation: 'slideUp 0.2s ease-out',
-            }}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-base font-semibold" style={{ color: 'var(--ctp-text)' }}>
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 40,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          animation: 'fadeIn 0.15s ease-out',
+        }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(17,17,27,0.7)' }} onClick={resetForm} />
+          <div style={{
+            position: 'relative', width: '100%', maxWidth: 560, margin: '0 16px',
+            background: 'var(--ctp-surface0)', border: '1px solid var(--ctp-surface1)',
+            borderRadius: 16, padding: 40, animation: 'slideUp 0.2s ease-out',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--ctp-text)' }}>
                 {editId ? '编辑实例' : '添加新实例'}
               </h3>
-              <button onClick={resetForm} className="p-1.5 rounded-md cursor-pointer transition-colors duration-150"
-                style={{ color: 'var(--ctp-overlay1)' }}
+              <button onClick={resetForm} style={{
+                padding: 6, borderRadius: 8, border: 'none', cursor: 'pointer',
+                background: 'none', color: 'var(--ctp-overlay1)', transition: 'color 0.15s ease',
+              }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--ctp-text)' }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--ctp-overlay1)' }}>
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
                 {[
                   { key: 'name', label: '名称', placeholder: '例如: 主服务器' },
                   { key: 'url', label: 'WebUI 地址', placeholder: 'http://localhost:8181' },
                   { key: 'username', label: '用户名', placeholder: 'admin' },
                   { key: 'password', label: '密码', placeholder: '••••••', type: 'password' },
                 ].map(({ key, label, placeholder, type }) => (
-                  <label key={key} className="block">
-                    <span className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--ctp-subtext0)' }}>{label}</span>
-                    <input type={type || 'text'} value={(form as any)[key]}
-                      onChange={(e) => setForm({ ...form, [key]: e.target.value })} placeholder={placeholder}
-                      className="w-full outline-none transition-colors duration-150" style={inputStyle}
+                  <div key={key}>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ctp-subtext0)', marginBottom: 10 }}>
+                      {label}
+                    </label>
+                    <input
+                      type={type || 'text'}
+                      value={(form as any)[key]}
+                      onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                      placeholder={placeholder}
+                      style={inputStyle}
                       onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-mauve)' }}
-                      onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }} />
-                  </label>
+                      onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }}
+                    />
+                  </div>
                 ))}
               </div>
-              <label className="block mb-5">
-                <span className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--ctp-subtext0)' }}>下载目录</span>
-                <input value={form.download_path} onChange={(e) => setForm({ ...form, download_path: e.target.value })}
-                  placeholder="/root/AniBt" className="w-full outline-none transition-colors duration-150" style={inputStyle}
+              <div style={{ marginBottom: 32 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ctp-subtext0)', marginBottom: 10 }}>
+                  下载目录
+                </label>
+                <input
+                  value={form.download_path}
+                  onChange={(e) => setForm({ ...form, download_path: e.target.value })}
+                  placeholder="/root/AniBt"
+                  style={inputStyle}
                   onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-mauve)' }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }} />
-              </label>
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }}
+                />
+              </div>
 
-              <div className="flex gap-3 justify-end">
+              <div style={{ display: 'flex', gap: 16, justifyContent: 'flex-end' }}>
                 <button type="button" onClick={() => {
                   setFormTesting(true); setFormTestResult(null)
                   testConnectionMutation.mutate({ url: form.url, username: form.username, password: form.password })
                 }} disabled={formTesting || !form.url}
-                  className="flex items-center gap-2 cursor-pointer transition-colors duration-150 disabled:opacity-40"
-                  style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
-                    background: 'transparent', color: 'var(--ctp-teal)', border: '1px solid var(--ctp-surface1)' }}>
-                  {formTesting ? <Loader2 size={14} className="animate-spin" /> : <TestTube size={14} />}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '12px 24px', borderRadius: 10, cursor: 'pointer',
+                    fontSize: 14, fontWeight: 500, fontFamily: 'inherit',
+                    background: 'transparent', color: 'var(--ctp-teal)',
+                    border: '1px solid var(--ctp-surface1)',
+                    opacity: (formTesting || !form.url) ? 0.4 : 1,
+                    transition: 'opacity 0.15s ease',
+                  }}>
+                  {formTesting ? <Loader2 size={15} style={{ animation: 'spin 0.8s linear infinite' }} /> : <TestTube size={15} />}
                   测试连接
                 </button>
-                <button type="button" onClick={resetForm} className="cursor-pointer transition-colors duration-150"
-                  style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
-                    background: 'transparent', color: 'var(--ctp-subtext0)', border: '1px solid var(--ctp-surface1)' }}>
+                <button type="button" onClick={resetForm}
+                  style={{
+                    padding: '12px 24px', borderRadius: 10, cursor: 'pointer',
+                    fontSize: 14, fontWeight: 500, fontFamily: 'inherit',
+                    background: 'transparent', color: 'var(--ctp-subtext0)',
+                    border: '1px solid var(--ctp-surface1)',
+                    transition: 'color 0.15s ease',
+                  }}>
                   取消
                 </button>
                 <button type="submit" disabled={createMutation.isPending || updateMutation.isPending}
-                  className="cursor-pointer transition-opacity duration-150 disabled:opacity-50"
-                  style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
-                    background: 'var(--ctp-mauve)', color: 'var(--ctp-crust)', border: 'none' }}>
+                  style={{
+                    padding: '12px 24px', borderRadius: 10, cursor: 'pointer',
+                    fontSize: 14, fontWeight: 500, fontFamily: 'inherit',
+                    background: 'var(--ctp-mauve)', color: 'var(--ctp-crust)', border: 'none',
+                    opacity: (createMutation.isPending || updateMutation.isPending) ? 0.5 : 1,
+                    transition: 'opacity 0.15s ease',
+                  }}>
                   {(createMutation.isPending || updateMutation.isPending) ? '保存中...' : editId ? '保存修改' : '添加实例'}
                 </button>
               </div>
 
               {formTestResult && (
-                <div className="mt-4 text-sm flex items-center gap-2"
-                  style={{ color: formTestResult.success ? 'var(--ctp-green)' : 'var(--ctp-red)' }}>
-                  {formTestResult.success ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8, marginTop: 20,
+                  fontSize: 13, color: formTestResult.success ? 'var(--ctp-green)' : 'var(--ctp-red)',
+                }}>
+                  {formTestResult.success ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
                   {formTestResult.success ? `连接成功 — qBittorrent ${formTestResult.version}` : `连接失败: ${formTestResult.error}`}
                 </div>
               )}
@@ -217,78 +260,83 @@ export default function Instances() {
 
       {/* Instance List */}
       {isLoading ? (
-        <div className="space-y-3">
+        <div>
           {[1, 2].map((n) => (
-            <div key={n} className="py-4 flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full" style={{ background: 'var(--ctp-surface1)' }} />
-              <div className="space-y-2 flex-1">
-                <div className="h-3 w-24 rounded" style={{ background: 'var(--ctp-surface1)' }} />
-                <div className="h-2.5 w-40 rounded" style={{ background: 'var(--ctp-surface1)' }} />
+            <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '20px 0' }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ctp-surface1)' }} />
+              <div>
+                <div style={{ height: 14, width: 96, borderRadius: 4, background: 'var(--ctp-surface1)', marginBottom: 8 }} />
+                <div style={{ height: 12, width: 160, borderRadius: 4, background: 'var(--ctp-surface1)' }} />
               </div>
             </div>
           ))}
         </div>
       ) : instances.length === 0 ? (
-        <div className="py-16 text-center">
-          <p className="text-sm" style={{ color: 'var(--ctp-overlay1)' }}>暂无实例</p>
-          <p className="text-xs mt-1" style={{ color: 'var(--ctp-overlay0)' }}>点击「添加实例」开始管理 qBittorrent</p>
+        <div style={{ padding: '64px 0', textAlign: 'center' as const }}>
+          <p style={{ fontSize: 14, color: 'var(--ctp-overlay1)' }}>暂无实例</p>
+          <p style={{ fontSize: 12, color: 'var(--ctp-overlay0)', marginTop: 8 }}>点击「添加实例」开始管理 qBittorrent</p>
         </div>
       ) : (
         <div style={{
-          background: 'var(--ctp-surface0)', border: '1px solid var(--ctp-surface1)',
-          borderRadius: '12px', overflow: 'hidden',
+          background: 'var(--ctp-surface0)',
+          border: '1px solid var(--ctp-surface1)',
+          borderRadius: 14,
+          overflow: 'hidden',
         }}>
           {instances.map((inst: any, idx: number) => (
-            <div key={inst.id}
-              className="flex items-center justify-between px-6 py-4 transition-colors duration-150"
-              style={{ borderBottom: idx < instances.length - 1 ? '1px solid var(--ctp-surface0)' : 'none' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ctp-surface0)' }}
+            <div key={inst.id} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '20px 24px',
+              borderBottom: idx < instances.length - 1 ? '1px solid var(--ctp-surface1)' : 'none',
+              transition: 'background 0.15s ease',
+            }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(69,71,90,0.3)' }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full shrink-0"
-                  style={{ background: inst.status?.connected ? 'var(--ctp-green)' : 'var(--ctp-red)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                  background: inst.status?.connected ? 'var(--ctp-green)' : 'var(--ctp-red)',
+                }} />
                 <div>
-                  <p className="text-sm font-medium" style={{ color: 'var(--ctp-text)' }}>{inst.name}</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--ctp-overlay1)', fontFamily: '"Geist Mono", monospace' }}>{inst.url}</p>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)', lineHeight: 1.4 }}>{inst.name}</p>
+                  <p style={{ fontSize: 12, color: 'var(--ctp-overlay1)', marginTop: 4, fontFamily: '"Geist Mono", monospace' }}>{inst.url}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 {inst.status?.connected && (
                   <>
-                    <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--ctp-green)' }}>
-                      <Upload size={11} /> {formatSpeed(inst.status.up_speed || 0)}
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ctp-green)' }}>
+                      <Upload size={12} /> {formatSpeed(inst.status.up_speed || 0)}
                     </span>
-                    <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--ctp-teal)' }}>
-                      <Download size={11} /> {formatSpeed(inst.status.dl_speed || 0)}
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ctp-teal)' }}>
+                      <Download size={12} /> {formatSpeed(inst.status.dl_speed || 0)}
                     </span>
-                    <span className="text-xs" style={{ color: 'var(--ctp-subtext0)' }}>{inst.status.total || 0} 种子</span>
+                    <span style={{ fontSize: 13, color: 'var(--ctp-subtext0)' }}>{inst.status.total || 0} 种子</span>
                   </>
                 )}
                 {!inst.status?.connected && (
-                  <span className="text-xs" style={{ color: 'var(--ctp-red)' }}>离线</span>
+                  <span style={{ fontSize: 13, color: 'var(--ctp-red)' }}>离线</span>
                 )}
-                <div className="flex gap-1 ml-2">
-                  <button onClick={() => handleTest(inst.id)} disabled={testingId === inst.id}
-                    className="p-1.5 rounded-md cursor-pointer transition-colors duration-150"
-                    style={{ color: 'var(--ctp-overlay1)' }} title="测试连接"
-                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--ctp-text)' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--ctp-overlay1)' }}>
-                    {testingId === inst.id ? <Loader2 size={14} className="animate-spin" /> : <TestTube size={14} />}
-                  </button>
-                  <button onClick={() => handleEdit(inst)}
-                    className="p-1.5 rounded-md cursor-pointer transition-colors duration-150"
-                    style={{ color: 'var(--ctp-overlay1)' }} title="编辑"
-                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--ctp-text)' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--ctp-overlay1)' }}>
-                    <Pencil size={14} />
-                  </button>
-                  <button onClick={() => setDeleteConfirm(inst.id)}
-                    className="p-1.5 rounded-md cursor-pointer transition-colors duration-150"
-                    style={{ color: 'var(--ctp-overlay1)' }} title="删除"
-                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--ctp-red)' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--ctp-overlay1)' }}>
-                    <Trash2 size={14} />
-                  </button>
+                <div style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
+                  {([
+                    { icon: TestTube, title: '测试连接', onClick: () => handleTest(inst.id), loading: testingId === inst.id },
+                    { icon: Pencil, title: '编辑', onClick: () => handleEdit(inst) },
+                    { icon: Trash2, title: '删除', onClick: () => setDeleteConfirm(inst.id), hoverColor: 'var(--ctp-red)' },
+                  ] as const).map((btn, bi) => (
+                    <button key={bi} onClick={btn.onClick} title={btn.title}
+                      disabled={'loading' in btn && btn.loading}
+                      style={{
+                        padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer',
+                        background: 'none', color: 'var(--ctp-overlay1)',
+                        transition: 'color 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = ('hoverColor' in btn ? btn.hoverColor : 'var(--ctp-text)') as string }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--ctp-overlay1)' }}>
+                      {'loading' in btn && btn.loading
+                        ? <Loader2 size={15} style={{ animation: 'spin 0.8s linear infinite' }} />
+                        : <btn.icon size={15} />}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -298,24 +346,39 @@ export default function Instances() {
 
       {/* Delete Confirmation */}
       {deleteConfirm !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ animation: 'fadeIn 0.15s ease-out' }}>
-          <div className="absolute inset-0" style={{ background: 'rgba(17,17,27,0.7)' }} onClick={() => setDeleteConfirm(null)} />
-          <div className="relative w-full max-w-sm mx-4" style={{
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 50,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          animation: 'fadeIn 0.15s ease-out',
+        }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(17,17,27,0.7)' }} onClick={() => setDeleteConfirm(null)} />
+          <div style={{
+            position: 'relative', width: '100%', maxWidth: 400, margin: '0 16px',
             background: 'var(--ctp-surface0)', border: '1px solid var(--ctp-surface1)',
-            borderRadius: '16px', padding: '24px', animation: 'slideUp 0.2s ease-out',
+            borderRadius: 16, padding: 40, animation: 'slideUp 0.2s ease-out',
           }}>
-            <h3 className="text-base font-semibold mb-2" style={{ color: 'var(--ctp-text)' }}>确认删除</h3>
-            <p className="text-sm mb-6" style={{ color: 'var(--ctp-overlay1)' }}>此操作无法撤销，确定要删除此实例吗？</p>
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => setDeleteConfirm(null)} className="cursor-pointer transition-colors duration-150"
-                style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
-                  background: 'transparent', color: 'var(--ctp-subtext0)', border: '1px solid var(--ctp-surface1)' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--ctp-text)', marginBottom: 12 }}>确认删除</h3>
+            <p style={{ fontSize: 14, color: 'var(--ctp-overlay1)', marginBottom: 32, lineHeight: 1.6 }}>此操作无法撤销，确定要删除此实例吗？</p>
+            <div style={{ display: 'flex', gap: 16, justifyContent: 'flex-end' }}>
+              <button onClick={() => setDeleteConfirm(null)}
+                style={{
+                  padding: '12px 24px', borderRadius: 10, cursor: 'pointer',
+                  fontSize: 14, fontWeight: 500, fontFamily: 'inherit',
+                  background: 'transparent', color: 'var(--ctp-subtext0)',
+                  border: '1px solid var(--ctp-surface1)',
+                  transition: 'color 0.15s ease',
+                }}>
                 取消
               </button>
               <button onClick={() => deleteMutation.mutate(deleteConfirm)} disabled={deleteMutation.isPending}
-                className="cursor-pointer transition-colors duration-150 disabled:opacity-50"
-                style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
-                  background: 'transparent', color: 'var(--ctp-red)', border: '1px solid var(--ctp-red)' }}>
+                style={{
+                  padding: '12px 24px', borderRadius: 10, cursor: 'pointer',
+                  fontSize: 14, fontWeight: 500, fontFamily: 'inherit',
+                  background: 'transparent', color: 'var(--ctp-red)',
+                  border: '1px solid var(--ctp-red)',
+                  opacity: deleteMutation.isPending ? 0.5 : 1,
+                  transition: 'opacity 0.15s ease',
+                }}>
                 {deleteMutation.isPending ? '删除中...' : '确认删除'}
               </button>
             </div>
@@ -325,15 +388,19 @@ export default function Instances() {
 
       {/* Test Result Toast */}
       {testResult && (
-        <div className="fixed bottom-6 right-6 flex items-center gap-2 px-4 py-2.5 text-sm font-medium z-50 cursor-pointer"
+        <div
+          onClick={() => setTestResult(null)}
           style={{
-            borderRadius: '8px', background: 'var(--ctp-surface0)',
+            position: 'fixed', bottom: 24, right: 24, zIndex: 50,
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '14px 20px', borderRadius: 10, cursor: 'pointer',
+            fontSize: 13, fontWeight: 500,
+            background: 'var(--ctp-surface0)',
             border: `1px solid ${testResult.success ? 'var(--ctp-green)' : 'var(--ctp-red)'}`,
             color: testResult.success ? 'var(--ctp-green)' : 'var(--ctp-red)',
             animation: 'fadeIn 0.2s ease-out',
-          }}
-          onClick={() => setTestResult(null)}>
-          {testResult.success ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+          }}>
+          {testResult.success ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
           {testResult.success ? `连接成功 (v${testResult.version})` : `连接失败: ${testResult.error}`}
         </div>
       )}

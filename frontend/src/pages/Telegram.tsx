@@ -13,6 +13,19 @@ const toggleFields = [
   { key: 'daily_summary', label: '每日统计', desc: '每日定时发送运行数据摘要' },
 ]
 
+const tgInputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '14px 16px',
+  borderRadius: 10,
+  fontSize: 14,
+  background: 'var(--ctp-surface0)',
+  border: '1px solid var(--ctp-surface1)',
+  color: 'var(--ctp-text)',
+  fontFamily: '"Geist Mono", monospace',
+  outline: 'none',
+  transition: 'border-color 0.15s ease',
+}
+
 export default function Telegram() {
   const queryClient = useQueryClient()
   const { data, isLoading } = useQuery({ queryKey: ['telegram'], queryFn: telegramApi.get })
@@ -39,131 +52,174 @@ export default function Telegram() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-7 h-7 rounded-full border-2 border-t-transparent animate-spin"
-          style={{ borderColor: 'var(--ctp-surface2)', borderTopColor: 'transparent' }} />
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: '50%',
+          border: '2px solid var(--ctp-surface2)',
+          borderTopColor: 'transparent',
+          animation: 'spin 0.8s linear infinite',
+        }} />
       </div>
     )
   }
 
-  const inputStyle: React.CSSProperties = {
-    padding: '10px 14px',
-    borderRadius: '8px',
-    fontSize: '13px',
-    background: 'var(--ctp-surface0)',
-    border: '1px solid var(--ctp-surface1)',
-    color: 'var(--ctp-text)',
-    fontFamily: '"Geist Mono", monospace',
-    width: '100%',
-  }
-
   return (
-    <div className="max-w-3xl mx-auto" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+    <div style={{ maxWidth: 720, animation: 'fadeIn 0.3s ease-out' }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-12">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 48 }}>
         <div>
-          <h1 className="text-2xl font-semibold" style={{ color: 'var(--ctp-text)' }}>Telegram 通知</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--ctp-subtext0)' }}>配置 Telegram Bot 推送通知</p>
+          <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--ctp-text)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>
+            Telegram 通知
+          </h1>
+          <p style={{ fontSize: 14, color: 'var(--ctp-subtext0)', marginTop: 8, lineHeight: 1.6 }}>
+            配置 Telegram Bot 推送通知
+          </p>
         </div>
-        <div className="flex gap-2">
+        <div style={{ display: 'flex', gap: 12 }}>
           <button
             onClick={() => testMutation.mutate()}
             disabled={testMutation.isPending}
-            className="flex items-center gap-2 cursor-pointer transition-colors duration-150"
             style={{
-              padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
-              background: 'transparent', color: 'var(--ctp-teal)', border: '1px solid var(--ctp-surface1)',
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '12px 24px', borderRadius: 10, cursor: 'pointer',
+              fontSize: 14, fontWeight: 500, fontFamily: 'inherit',
+              background: 'transparent', color: 'var(--ctp-teal)',
+              border: '1px solid var(--ctp-surface1)',
+              transition: 'border-color 0.15s ease',
             }}
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface2)' }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }}
           >
-            {testMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+            {testMutation.isPending ? <Loader2 size={15} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Send size={15} />}
             测试发送
           </button>
           <button
             onClick={() => saveMutation.mutate(form)}
             disabled={saveMutation.isPending}
-            className="flex items-center gap-2 cursor-pointer transition-opacity duration-150 disabled:opacity-50"
             style={{
-              padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '12px 24px', borderRadius: 10, cursor: 'pointer',
+              fontSize: 14, fontWeight: 500, fontFamily: 'inherit',
               background: saved ? 'var(--ctp-green)' : 'var(--ctp-mauve)',
               color: 'var(--ctp-crust)', border: 'none',
+              opacity: saveMutation.isPending ? 0.6 : 1,
+              transition: 'all 0.15s ease',
             }}
           >
-            <Save size={14} /> {saved ? '已保存 ✓' : '保存'}
+            <Save size={15} /> {saved ? '已保存 ✓' : '保存'}
           </button>
         </div>
       </div>
 
       {/* Connection settings */}
-      <div className="mb-12">
-        <h2 className="text-xs font-medium tracking-widest uppercase mb-4" style={{ color: 'var(--ctp-subtext0)' }}>
+      <div style={{ marginBottom: 56 }}>
+        <div style={{
+          fontSize: 12, fontWeight: 500,
+          textTransform: 'uppercase' as const,
+          letterSpacing: '0.1em',
+          color: 'var(--ctp-overlay1)',
+          marginBottom: 24,
+        }}>
           连接设置
-        </h2>
-        <div className="space-y-5">
-          {/* Enable toggle */}
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-sm font-medium" style={{ color: 'var(--ctp-text)' }}>启用通知</span>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--ctp-overlay1)' }}>开启 Telegram Bot 消息推送</p>
-            </div>
-            <button onClick={() => setForm({ ...form, enabled: !form.enabled })}
-              className="relative w-11 h-6 rounded-full transition-colors duration-150 cursor-pointer"
-              style={{ background: form.enabled ? 'var(--ctp-mauve)' : 'var(--ctp-surface2)' }}>
-              <div className="absolute top-[2px] w-5 h-5 rounded-full transition-all duration-150"
-                style={{ left: form.enabled ? '22px' : '2px', background: form.enabled ? 'var(--ctp-crust)' : 'var(--ctp-overlay0)' }} />
-            </button>
-          </div>
+        </div>
 
-          <label className="block">
-            <span className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--ctp-subtext0)' }}>Bot Token</span>
+        {/* Enable toggle */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '24px 0',
+          borderBottom: '1px solid var(--ctp-surface0)',
+        }}>
+          <div>
+            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)' }}>启用通知</span>
+            <p style={{ fontSize: 13, color: 'var(--ctp-overlay1)', marginTop: 6 }}>开启 Telegram Bot 消息推送</p>
+          </div>
+          <button onClick={() => setForm({ ...form, enabled: !form.enabled })}
+            style={{
+              position: 'relative', width: 44, height: 24,
+              borderRadius: 12, border: 'none', cursor: 'pointer',
+              background: form.enabled ? 'var(--ctp-mauve)' : 'var(--ctp-surface2)',
+              transition: 'background 0.2s ease',
+            }}>
+            <div style={{
+              position: 'absolute', top: 2,
+              left: form.enabled ? 22 : 2,
+              width: 20, height: 20, borderRadius: 10,
+              background: form.enabled ? 'var(--ctp-crust)' : 'var(--ctp-overlay0)',
+              transition: 'all 0.2s ease',
+            }} />
+          </button>
+        </div>
+
+        <div style={{ paddingTop: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ctp-subtext0)', marginBottom: 10 }}>
+              Bot Token
+            </label>
             <input
               value={form.bot_token || ''}
               onChange={(e) => setForm({ ...form, bot_token: e.target.value })}
               placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
-              className="outline-none transition-colors duration-150"
-              style={inputStyle}
+              style={tgInputStyle}
               onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-mauve)' }}
               onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }}
             />
-          </label>
+          </div>
 
-          <label className="block">
-            <span className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--ctp-subtext0)' }}>Chat ID</span>
+          <div>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ctp-subtext0)', marginBottom: 10 }}>
+              Chat ID
+            </label>
             <input
               value={form.chat_id || ''}
               onChange={(e) => setForm({ ...form, chat_id: e.target.value })}
               placeholder="-100123456789"
-              className="outline-none transition-colors duration-150"
-              style={inputStyle}
+              style={tgInputStyle}
               onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-mauve)' }}
               onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }}
             />
-          </label>
+          </div>
         </div>
       </div>
 
       {/* Notification events */}
       <div>
-        <h2 className="text-xs font-medium tracking-widest uppercase mb-4" style={{ color: 'var(--ctp-subtext0)' }}>
+        <div style={{
+          fontSize: 12, fontWeight: 500,
+          textTransform: 'uppercase' as const,
+          letterSpacing: '0.1em',
+          color: 'var(--ctp-overlay1)',
+          marginBottom: 24,
+        }}>
           通知事件
-        </h2>
+        </div>
         <div>
           {toggleFields.map(({ key, label, desc }, i) => (
             <div
               key={key}
-              className="flex items-center justify-between py-4 transition-colors duration-150"
-              style={{ borderBottom: i < toggleFields.length - 1 ? '1px solid var(--ctp-surface0)' : 'none' }}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '24px 0',
+                borderBottom: i < toggleFields.length - 1 ? '1px solid var(--ctp-surface0)' : 'none',
+              }}
             >
               <div>
-                <span className="text-sm font-medium" style={{ color: 'var(--ctp-text)' }}>{label}</span>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--ctp-overlay1)' }}>{desc}</p>
+                <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)' }}>{label}</span>
+                <p style={{ fontSize: 13, color: 'var(--ctp-overlay1)', marginTop: 6 }}>{desc}</p>
               </div>
               <button onClick={() => setForm({ ...form, [key]: !form[key] })}
-                className="relative w-11 h-6 rounded-full transition-colors duration-150 cursor-pointer shrink-0 ml-4"
-                style={{ background: form[key] ? 'var(--ctp-mauve)' : 'var(--ctp-surface2)' }}>
-                <div className="absolute top-[2px] w-5 h-5 rounded-full transition-all duration-150"
-                  style={{ left: form[key] ? '22px' : '2px', background: form[key] ? 'var(--ctp-crust)' : 'var(--ctp-overlay0)' }} />
+                style={{
+                  position: 'relative', width: 44, height: 24,
+                  borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0, marginLeft: 20,
+                  background: form[key] ? 'var(--ctp-mauve)' : 'var(--ctp-surface2)',
+                  transition: 'background 0.2s ease',
+                }}>
+                <div style={{
+                  position: 'absolute', top: 2,
+                  left: form[key] ? 22 : 2,
+                  width: 20, height: 20, borderRadius: 10,
+                  background: form[key] ? 'var(--ctp-crust)' : 'var(--ctp-overlay0)',
+                  transition: 'all 0.2s ease',
+                }} />
               </button>
             </div>
           ))}
@@ -173,30 +229,33 @@ export default function Telegram() {
       {/* Test result toast */}
       {testResult && (
         <div
-          className="fixed bottom-6 right-6 flex items-center gap-2 px-4 py-2.5 text-sm font-medium z-50 cursor-pointer"
+          onClick={() => setTestResult(null)}
           style={{
-            borderRadius: '8px', background: 'var(--ctp-surface0)',
+            position: 'fixed', bottom: 24, right: 24, zIndex: 50,
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '14px 20px', borderRadius: 10, cursor: 'pointer',
+            fontSize: 13, fontWeight: 500,
+            background: 'var(--ctp-surface0)',
             border: `1px solid ${testResult.success ? 'var(--ctp-green)' : 'var(--ctp-red)'}`,
             color: testResult.success ? 'var(--ctp-green)' : 'var(--ctp-red)',
             animation: 'fadeIn 0.2s ease-out',
-          }}
-          onClick={() => setTestResult(null)}
-        >
-          {testResult.success ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+          }}>
+          {testResult.success ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
           {testResult.success ? '测试消息已发送' : `发送失败: ${testResult.error}`}
         </div>
       )}
 
       {saved && (
-        <div
-          className="fixed top-6 right-6 flex items-center gap-2 px-4 py-2.5 text-sm font-medium z-50"
-          style={{
-            borderRadius: '8px', background: 'var(--ctp-surface0)',
-            border: '1px solid var(--ctp-green)', color: 'var(--ctp-green)',
-            animation: 'fadeIn 0.2s ease-out',
-          }}
-        >
-          <Save size={14} /> 设置已保存
+        <div style={{
+          position: 'fixed', top: 24, right: 24, zIndex: 50,
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '14px 20px', borderRadius: 10,
+          fontSize: 13, fontWeight: 500,
+          background: 'var(--ctp-surface0)',
+          border: '1px solid var(--ctp-green)', color: 'var(--ctp-green)',
+          animation: 'fadeIn 0.2s ease-out',
+        }}>
+          <Save size={15} /> 设置已保存
         </div>
       )}
     </div>

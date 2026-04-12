@@ -47,25 +47,29 @@ export default function Dashboard() {
   const activeTorrents = connectedInstances.reduce((sum: number, i: any) => sum + (i.status?.active || 0), 0)
 
   return (
-    <div className="max-w-6xl mx-auto" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+    <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
       {/* Page header */}
-      <div className="mb-12">
-        <h1 className="text-2xl font-semibold" style={{ color: 'var(--ctp-text)' }}>仪表盘</h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--ctp-subtext0)' }}>
+      <div style={{ marginBottom: 48 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--ctp-text)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>
+          仪表盘
+        </h1>
+        <p style={{ fontSize: 14, color: 'var(--ctp-subtext0)', marginTop: 8, lineHeight: 1.6 }}>
           系统运行状态概览 · {connectedInstances.length} 个实例在线
         </p>
       </div>
 
       {/* Stats Grid */}
-      <div
-        className="grid gap-6 mb-12"
-        style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}
-      >
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+        gap: 32,
+        marginBottom: 56,
+      }}>
         {loadingInstances ? (
           Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="py-3">
-              <div className="h-3 w-16 rounded mb-3" style={{ background: 'var(--ctp-surface0)' }} />
-              <div className="h-6 w-24 rounded" style={{ background: 'var(--ctp-surface0)' }} />
+            <div key={i} style={{ padding: '24px 0' }}>
+              <div style={{ height: 12, width: 64, borderRadius: 4, background: 'var(--ctp-surface0)', marginBottom: 16 }} />
+              <div style={{ height: 24, width: 96, borderRadius: 4, background: 'var(--ctp-surface0)' }} />
             </div>
           ))
         ) : (
@@ -80,38 +84,43 @@ export default function Dashboard() {
 
       {/* Today summary */}
       {summary && (
-        <div className="flex items-center gap-8 mb-12">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 56, flexWrap: 'wrap' }}>
           <div>
-            <span className="text-xs block mb-1" style={{ color: 'var(--ctp-overlay1)' }}>今日上传</span>
-            <span className="text-sm font-medium" style={{ color: 'var(--ctp-text)' }}>{formatBytes(summary.today_uploaded_bytes || 0)}</span>
+            <span style={{ fontSize: 12, display: 'block', marginBottom: 6, color: 'var(--ctp-overlay1)' }}>今日上传</span>
+            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)' }}>{formatBytes(summary.today_uploaded_bytes || 0)}</span>
           </div>
-          <div style={{ width: '1px', height: '24px', background: 'var(--ctp-surface1)' }} />
+          <div style={{ width: 1, height: 28, background: 'var(--ctp-surface1)' }} />
           <div>
-            <span className="text-xs block mb-1" style={{ color: 'var(--ctp-overlay1)' }}>今日下载</span>
-            <span className="text-sm font-medium" style={{ color: 'var(--ctp-text)' }}>{formatBytes(summary.today_downloaded_bytes || 0)}</span>
+            <span style={{ fontSize: 12, display: 'block', marginBottom: 6, color: 'var(--ctp-overlay1)' }}>今日下载</span>
+            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)' }}>{formatBytes(summary.today_downloaded_bytes || 0)}</span>
           </div>
-          <div style={{ width: '1px', height: '24px', background: 'var(--ctp-surface1)' }} />
+          <div style={{ width: 1, height: 28, background: 'var(--ctp-surface1)' }} />
           <div>
-            <span className="text-xs block mb-1" style={{ color: 'var(--ctp-overlay1)' }}>今日操作</span>
-            <span className="text-sm font-medium" style={{ color: 'var(--ctp-text)' }}>{summary.today_actions || 0}</span>
+            <span style={{ fontSize: 12, display: 'block', marginBottom: 6, color: 'var(--ctp-overlay1)' }}>今日操作</span>
+            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)' }}>{summary.today_actions || 0}</span>
           </div>
         </div>
       )}
 
       {/* Traffic chart */}
       {chartData.length > 0 && (
-        <div className="mb-12">
-          <h2 className="text-xs font-medium tracking-widest uppercase mb-4" style={{ color: 'var(--ctp-subtext0)' }}>
+        <div style={{ marginBottom: 56 }}>
+          <div style={{
+            fontSize: 12,
+            fontWeight: 500,
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.1em',
+            color: 'var(--ctp-overlay1)',
+            marginBottom: 24,
+          }}>
             流量趋势
-          </h2>
-          <div
-            style={{
-              background: 'var(--ctp-surface0)',
-              border: '1px solid var(--ctp-surface1)',
-              borderRadius: '12px',
-              padding: '24px',
-            }}
-          >
+          </div>
+          <div style={{
+            background: 'var(--ctp-surface0)',
+            border: '1px solid var(--ctp-surface1)',
+            borderRadius: 14,
+            padding: 32,
+          }}>
             <ResponsiveContainer width="100%" height={240}>
               <AreaChart data={chartData}>
                 <defs>
@@ -142,8 +151,9 @@ export default function Dashboard() {
                   contentStyle={{
                     background: '#313244',
                     border: '1px solid #45475a',
-                    borderRadius: '8px',
-                    fontSize: '12px',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    padding: '12px 16px',
                     color: '#cdd6f4',
                   }}
                   formatter={(value: any, name: any) => [`${value} MB`, name === 'upload' ? '上传' : '下载']}
@@ -158,79 +168,88 @@ export default function Dashboard() {
 
       {/* Instance list */}
       <div>
-        <h2 className="text-xs font-medium tracking-widest uppercase mb-4" style={{ color: 'var(--ctp-subtext0)' }}>
+        <div style={{
+          fontSize: 12,
+          fontWeight: 500,
+          textTransform: 'uppercase' as const,
+          letterSpacing: '0.1em',
+          color: 'var(--ctp-overlay1)',
+          marginBottom: 24,
+        }}>
           实例状态
-        </h2>
-        <div
-          style={{
-            background: 'var(--ctp-surface0)',
-            border: '1px solid var(--ctp-surface1)',
-            borderRadius: '12px',
-            overflow: 'hidden',
-          }}
-        >
-          {loadingInstances ? (
-            <div className="p-6 space-y-4">
-              {[1, 2, 3].map((n) => (
-                <div key={n} className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full" style={{ background: 'var(--ctp-surface1)' }} />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3 w-28 rounded" style={{ background: 'var(--ctp-surface1)' }} />
-                    <div className="h-2.5 w-44 rounded" style={{ background: 'var(--ctp-surface1)' }} />
-                  </div>
+        </div>
+
+        {loadingInstances ? (
+          <div>
+            {[1, 2, 3].map((n) => (
+              <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '20px 0' }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ctp-surface1)' }} />
+                <div>
+                  <div style={{ height: 14, width: 112, borderRadius: 4, background: 'var(--ctp-surface1)', marginBottom: 8 }} />
+                  <div style={{ height: 12, width: 176, borderRadius: 4, background: 'var(--ctp-surface1)' }} />
                 </div>
-              ))}
-            </div>
-          ) : instances.length === 0 ? (
-            <div className="px-6 py-16 text-center">
-              <p className="text-sm" style={{ color: 'var(--ctp-overlay1)' }}>暂无实例</p>
-              <p className="text-xs mt-1" style={{ color: 'var(--ctp-overlay0)' }}>
-                前往「实例管理」添加 qBittorrent 实例
-              </p>
-            </div>
-          ) : (
-            instances.map((inst: any, idx: number) => (
+              </div>
+            ))}
+          </div>
+        ) : instances.length === 0 ? (
+          <div style={{ padding: '64px 0', textAlign: 'center' as const }}>
+            <p style={{ fontSize: 14, color: 'var(--ctp-overlay1)' }}>暂无实例</p>
+            <p style={{ fontSize: 12, color: 'var(--ctp-overlay0)', marginTop: 8 }}>
+              前往「实例管理」添加 qBittorrent 实例
+            </p>
+          </div>
+        ) : (
+          <div>
+            {instances.map((inst: any, idx: number) => (
               <div
                 key={inst.id}
-                className="flex items-center justify-between px-6 py-4 transition-colors duration-150"
                 style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '20px 0',
                   borderBottom: idx < instances.length - 1 ? '1px solid var(--ctp-surface0)' : 'none',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ctp-surface0)' }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
               >
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ background: inst.status?.connected ? 'var(--ctp-green)' : 'var(--ctp-red)' }}
-                  />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{
+                    width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                    background: inst.status?.connected ? 'var(--ctp-green)' : 'var(--ctp-red)',
+                  }} />
                   <div>
-                    <p className="text-sm font-medium" style={{ color: 'var(--ctp-text)' }}>{inst.name}</p>
-                    <p className="text-xs mt-0.5" style={{ color: 'var(--ctp-overlay1)', fontFamily: '"Geist Mono", monospace' }}>{inst.url}</p>
+                    <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)', lineHeight: 1.4 }}>
+                      {inst.name}
+                    </p>
+                    <p style={{
+                      fontSize: 12, color: 'var(--ctp-overlay1)', marginTop: 4,
+                      fontFamily: '"Geist Mono", monospace',
+                    }}>
+                      {inst.url}
+                    </p>
                   </div>
                 </div>
 
                 {inst.status?.connected ? (
-                  <div className="flex items-center gap-5">
-                    <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--ctp-green)' }}>
-                      <Upload size={11} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 500, color: 'var(--ctp-green)' }}>
+                      <Upload size={12} />
                       {formatSpeed(inst.status.up_speed || 0)}
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--ctp-teal)' }}>
-                      <Download size={11} />
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 500, color: 'var(--ctp-teal)' }}>
+                      <Download size={12} />
                       {formatSpeed(inst.status.dl_speed || 0)}
-                    </div>
-                    <span className="text-xs" style={{ color: 'var(--ctp-subtext0)' }}>
+                    </span>
+                    <span style={{ fontSize: 13, color: 'var(--ctp-subtext0)' }}>
                       {inst.status.total || 0} 种子
                     </span>
                   </div>
                 ) : (
-                  <span className="text-xs" style={{ color: 'var(--ctp-red)' }}>离线</span>
+                  <span style={{ fontSize: 13, color: 'var(--ctp-red)' }}>离线</span>
                 )}
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

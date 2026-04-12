@@ -30,136 +30,125 @@ export default function SettingsForm({ category, title, description, fields }: S
   const [form, setForm] = useState<Record<string, any>>({})
   const [saved, setSaved] = useState(false)
 
-  useEffect(() => {
-    if (data) setForm(data)
-  }, [data])
+  useEffect(() => { if (data) setForm(data) }, [data])
 
   const mutation = useMutation({
     mutationFn: (config: any) => settingsApi.update(category, config),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings', category] })
       setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
+      setTimeout(() => setSaved(false), 2500)
     },
   })
 
-  function handleSave() {
-    mutation.mutate(form)
-  }
-
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div
-          className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin"
-          style={{ borderColor: 'var(--ctp-surface2)', borderTopColor: 'transparent' }}
-        />
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: '50%',
+          border: '2px solid var(--ctp-surface2)',
+          borderTopColor: 'transparent',
+          animation: 'spin 0.8s linear infinite',
+        }} />
       </div>
     )
   }
 
   return (
-    <div className="max-w-3xl" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+    <div style={{ maxWidth: 720, animation: 'fadeIn 0.35s ease-out' }}>
       {/* Header */}
-      <div className="mb-8">
-        <h1
-          className="text-lg font-medium tracking-tight"
-          style={{ color: 'var(--ctp-text)' }}
-        >
+      <div style={{ marginBottom: 48 }}>
+        <h1 style={{
+          fontSize: 22,
+          fontWeight: 600,
+          color: 'var(--ctp-text)',
+          letterSpacing: '-0.02em',
+          lineHeight: 1.3,
+        }}>
           {title}
         </h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--ctp-subtext0)' }}>
+        <p style={{ fontSize: 14, color: 'var(--ctp-subtext0)', marginTop: 8, lineHeight: 1.6 }}>
           {description}
         </p>
       </div>
 
       {/* Settings rows */}
-      <div className="mb-8">
+      <div style={{ marginBottom: 48 }}>
         {fields.map((field, i) => (
-          <div
-            key={field.key}
-            className="flex items-center justify-between py-4"
-            style={{
-              borderBottom: i < fields.length - 1 ? '1px solid var(--ctp-surface0)' : 'none',
-            }}
-          >
-            <div className="flex-1 pr-6">
-              <label className="text-sm font-medium" style={{ color: 'var(--ctp-text)' }}>
+          <div key={field.key} style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '24px 0',
+            borderBottom: i < fields.length - 1 ? '1px solid var(--ctp-surface0)' : 'none',
+          }}>
+            <div style={{ flex: 1, paddingRight: 40 }}>
+              <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)', lineHeight: 1.4 }}>
                 {field.label}
-              </label>
+              </div>
               {field.help && (
-                <p className="text-xs mt-0.5 leading-relaxed" style={{ color: 'var(--ctp-overlay0)' }}>
+                <div style={{ fontSize: 13, color: 'var(--ctp-overlay0)', marginTop: 6, lineHeight: 1.6 }}>
                   {field.help}
-                </p>
+                </div>
               )}
             </div>
-
-            <div className="ml-4 flex items-center gap-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
               {field.type === 'toggle' ? (
                 <button
+                  type="button"
                   onClick={() => setForm({ ...form, [field.key]: !form[field.key] })}
-                  className="relative w-10 h-[22px] rounded-full transition-colors duration-200 cursor-pointer"
                   style={{
-                    background: form[field.key]
-                      ? 'var(--ctp-mauve)'
-                      : 'var(--ctp-surface1)',
+                    position: 'relative',
+                    width: 44, height: 24,
+                    borderRadius: 12, border: 'none', cursor: 'pointer',
+                    background: form[field.key] ? 'var(--ctp-mauve)' : 'var(--ctp-surface1)',
+                    transition: 'background 0.2s ease',
                   }}
                 >
-                  <div
-                    className="absolute top-[2px] w-[18px] h-[18px] rounded-full transition-all duration-200"
-                    style={{
-                      left: form[field.key] ? '20px' : '2px',
-                      background: form[field.key] ? 'var(--ctp-crust)' : 'var(--ctp-overlay0)',
-                    }}
-                  />
+                  <div style={{
+                    position: 'absolute', top: 2,
+                    left: form[field.key] ? 22 : 2,
+                    width: 20, height: 20, borderRadius: 10,
+                    background: form[field.key] ? 'var(--ctp-crust)' : 'var(--ctp-overlay0)',
+                    transition: 'all 0.2s ease',
+                  }} />
                 </button>
               ) : field.type === 'number' ? (
-                <div className="flex items-center gap-2">
+                <>
                   <input
                     type="number"
                     value={form[field.key] ?? ''}
                     onChange={(e) => setForm({ ...form, [field.key]: Number(e.target.value) })}
-                    min={field.min}
-                    max={field.max}
-                    className="w-24 px-3 py-2 rounded-lg text-sm text-right outline-none transition-colors duration-150"
+                    min={field.min} max={field.max}
                     style={{
-                      background: 'var(--ctp-surface0)',
-                      border: '1px solid var(--ctp-surface1)',
-                      color: 'var(--ctp-text)',
+                      width: 100, padding: '10px 14px',
+                      borderRadius: 8, border: '1px solid var(--ctp-surface1)',
+                      background: 'var(--ctp-surface0)', color: 'var(--ctp-text)',
+                      fontSize: 14, fontFamily: "'Geist Mono', monospace",
+                      textAlign: 'right' as const, outline: 'none',
+                      transition: 'border-color 0.15s ease',
                     }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--ctp-mauve)'
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--ctp-surface1)'
-                    }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-mauve)' }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }}
                   />
                   {field.unit && (
-                    <span
-                      className="text-xs"
-                      style={{ color: 'var(--ctp-overlay0)' }}
-                    >
-                      {field.unit}
-                    </span>
+                    <span style={{ fontSize: 13, color: 'var(--ctp-overlay0)', minWidth: 28 }}>{field.unit}</span>
                   )}
-                </div>
+                </>
               ) : (
                 <input
                   type="text"
                   value={form[field.key] ?? ''}
                   onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
-                  className="w-56 px-3 py-2 rounded-lg text-sm outline-none transition-colors duration-150"
                   style={{
-                    background: 'var(--ctp-surface0)',
-                    border: '1px solid var(--ctp-surface1)',
-                    color: 'var(--ctp-text)',
+                    width: 240, padding: '10px 14px',
+                    borderRadius: 8, border: '1px solid var(--ctp-surface1)',
+                    background: 'var(--ctp-surface0)', color: 'var(--ctp-text)',
+                    fontSize: 14, outline: 'none',
+                    transition: 'border-color 0.15s ease',
                   }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--ctp-mauve)'
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--ctp-surface1)'
-                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-mauve)' }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }}
                 />
               )}
             </div>
@@ -168,43 +157,38 @@ export default function SettingsForm({ category, title, description, fields }: S
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-3">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <button
-          onClick={handleSave}
-          className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors duration-150"
+          onClick={() => mutation.mutate(form)}
+          disabled={mutation.isPending}
           style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '12px 24px', borderRadius: 10,
+            border: 'none', cursor: 'pointer',
+            fontSize: 14, fontWeight: 500, fontFamily: 'inherit',
             background: saved ? 'var(--ctp-green)' : 'var(--ctp-mauve)',
             color: 'var(--ctp-crust)',
-          }}
-          onMouseEnter={(e) => {
-            if (!saved) e.currentTarget.style.opacity = '0.85'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = '1'
+            transition: 'all 0.15s ease',
+            opacity: mutation.isPending ? 0.6 : 1,
           }}
         >
-          <Save size={14} /> {saved ? '已保存 ✓' : '保存'}
+          <Save size={15} /> {saved ? '已保存 ✓' : '保存设置'}
         </button>
-
         <button
           onClick={() => data && setForm(data)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm cursor-pointer transition-colors duration-150"
-          style={{ color: 'var(--ctp-subtext0)' }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = 'var(--ctp-text)'
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '12px 20px', borderRadius: 10,
+            border: 'none', cursor: 'pointer',
+            fontSize: 14, fontFamily: 'inherit',
+            background: 'none', color: 'var(--ctp-subtext0)',
+            transition: 'color 0.15s ease',
           }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = 'var(--ctp-subtext0)'
-          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--ctp-text)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--ctp-subtext0)' }}
         >
-          <RotateCcw size={14} /> 重置
+          <RotateCcw size={15} /> 重置
         </button>
-
-        {saved && (
-          <span className="text-sm ml-2" style={{ color: 'var(--ctp-green)' }}>
-            设置已保存
-          </span>
-        )}
       </div>
     </div>
   )

@@ -25,24 +25,31 @@ export default function Logs() {
   const totalPages = data ? Math.ceil(data.total / limit) : 0
 
   return (
-    <div className="max-w-5xl mx-auto" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+    <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-12">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 48 }}>
         <div>
-          <h1 className="text-2xl font-semibold" style={{ color: 'var(--ctp-text)' }}>操作日志</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--ctp-subtext0)' }}>查看系统自动管理操作记录</p>
+          <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--ctp-text)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>
+            操作日志
+          </h1>
+          <p style={{ fontSize: 14, color: 'var(--ctp-subtext0)', marginTop: 8, lineHeight: 1.6 }}>
+            查看系统自动管理操作记录
+          </p>
         </div>
         <select
           value={filter || ''}
           onChange={(e) => { setFilter(e.target.value || undefined); setPage(0) }}
-          className="outline-none cursor-pointer transition-colors duration-150"
           style={{
-            padding: '8px 14px',
-            borderRadius: '8px',
-            fontSize: '13px',
+            padding: '12px 16px',
+            borderRadius: 10,
+            fontSize: 14,
             background: 'var(--ctp-surface0)',
             border: '1px solid var(--ctp-surface1)',
             color: 'var(--ctp-text)',
+            outline: 'none',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            transition: 'border-color 0.15s ease',
           }}
         >
           <option value="">全部类型</option>
@@ -52,25 +59,25 @@ export default function Logs() {
 
       {/* Log List */}
       {isLoading ? (
-        <div className="space-y-3">
+        <div>
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 py-3">
-              <div className="h-3 w-12 rounded" style={{ background: 'var(--ctp-surface1)' }} />
-              <div className="flex-1 h-3 rounded" style={{ background: 'var(--ctp-surface1)' }} />
-              <div className="h-3 w-24 rounded" style={{ background: 'var(--ctp-surface1)' }} />
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px 0' }}>
+              <div style={{ height: 14, width: 48, borderRadius: 4, background: 'var(--ctp-surface1)' }} />
+              <div style={{ flex: 1, height: 14, borderRadius: 4, background: 'var(--ctp-surface1)' }} />
+              <div style={{ height: 14, width: 96, borderRadius: 4, background: 'var(--ctp-surface1)' }} />
             </div>
           ))}
         </div>
       ) : (!data || data.logs.length === 0) ? (
-        <div className="py-16 text-center">
-          <p className="text-sm" style={{ color: 'var(--ctp-overlay1)' }}>暂无日志</p>
+        <div style={{ padding: '64px 0', textAlign: 'center' as const }}>
+          <p style={{ fontSize: 14, color: 'var(--ctp-overlay1)' }}>暂无日志</p>
         </div>
       ) : (
         <>
           <div style={{
             background: 'var(--ctp-surface0)',
             border: '1px solid var(--ctp-surface1)',
-            borderRadius: '12px',
+            borderRadius: 14,
             overflow: 'hidden',
           }}>
             {data.logs.map((log: any, idx: number) => {
@@ -78,24 +85,41 @@ export default function Logs() {
               return (
                 <div
                   key={log.id}
-                  className="flex items-center gap-4 px-6 py-3.5 transition-colors duration-150"
-                  style={{ borderBottom: idx < data.logs.length - 1 ? '1px solid var(--ctp-surface0)' : 'none' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ctp-surface0)' }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 16,
+                    padding: '20px 28px',
+                    borderBottom: idx < data.logs.length - 1 ? '1px solid var(--ctp-surface1)' : 'none',
+                    transition: 'background 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(69,71,90,0.3)' }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
                 >
-                  <span className="text-xs font-medium shrink-0 w-12" style={{ color: a.color }}>
+                  <span style={{
+                    fontSize: 13, fontWeight: 500, flexShrink: 0, width: 48,
+                    color: a.color,
+                  }}>
                     {a.label}
                   </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm truncate" style={{ color: 'var(--ctp-text)' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{
+                      fontSize: 14, color: 'var(--ctp-text)', lineHeight: 1.4,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
+                    }}>
                       {log.torrent_name || '—'}
                     </p>
                     {log.details && (
-                      <p className="text-xs truncate mt-0.5" style={{ color: 'var(--ctp-overlay1)' }}>{log.details}</p>
+                      <p style={{
+                        fontSize: 12, color: 'var(--ctp-overlay1)', marginTop: 4,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
+                      }}>{log.details}</p>
                     )}
                   </div>
-                  <time className="text-xs shrink-0 tabular-nums"
-                    style={{ color: 'var(--ctp-overlay1)', fontFamily: '"Geist Mono", monospace' }}>
+                  <time style={{
+                    fontSize: 12, flexShrink: 0,
+                    color: 'var(--ctp-overlay1)',
+                    fontFamily: '"Geist Mono", monospace',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}>
                     {log.timestamp ? new Date(log.timestamp).toLocaleString('zh-CN', {
                       month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
                     }) : '—'}
@@ -107,23 +131,44 @@ export default function Logs() {
 
           {/* Pagination */}
           {data.total > limit && (
-            <div className="flex items-center justify-center gap-4 mt-6">
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: 16, marginTop: 40,
+            }}>
               <button
                 disabled={page === 0}
                 onClick={() => setPage(p => p - 1)}
-                className="flex items-center gap-1 cursor-pointer transition-colors duration-150 disabled:opacity-30"
-                style={{ color: 'var(--ctp-subtext0)', background: 'none', border: 'none', fontSize: '13px' }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '10px 16px', borderRadius: 8,
+                  background: 'none', border: 'none', cursor: page === 0 ? 'default' : 'pointer',
+                  fontSize: 13, fontFamily: 'inherit',
+                  color: 'var(--ctp-subtext0)',
+                  opacity: page === 0 ? 0.3 : 1,
+                  transition: 'opacity 0.15s ease',
+                }}
               >
                 <ChevronLeft size={14} /> 上一页
               </button>
-              <span className="text-xs tabular-nums" style={{ color: 'var(--ctp-overlay1)' }}>
+              <span style={{
+                fontSize: 12, color: 'var(--ctp-overlay1)',
+                fontVariantNumeric: 'tabular-nums',
+              }}>
                 {page + 1} / {totalPages}
               </span>
               <button
                 disabled={(page + 1) * limit >= data.total}
                 onClick={() => setPage(p => p + 1)}
-                className="flex items-center gap-1 cursor-pointer transition-colors duration-150 disabled:opacity-30"
-                style={{ color: 'var(--ctp-subtext0)', background: 'none', border: 'none', fontSize: '13px' }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '10px 16px', borderRadius: 8,
+                  background: 'none', border: 'none',
+                  cursor: (page + 1) * limit >= data.total ? 'default' : 'pointer',
+                  fontSize: 13, fontFamily: 'inherit',
+                  color: 'var(--ctp-subtext0)',
+                  opacity: (page + 1) * limit >= data.total ? 0.3 : 1,
+                  transition: 'opacity 0.15s ease',
+                }}
               >
                 下一页 <ChevronRight size={14} />
               </button>
