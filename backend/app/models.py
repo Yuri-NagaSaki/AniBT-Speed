@@ -63,3 +63,15 @@ class TrafficRecord(Base):
     uploaded = Column(Float, default=0)  # bytes
     downloaded = Column(Float, default=0)  # bytes
     interval_seconds = Column(Integer, default=60)
+
+
+class RSSProcessedItem(Base):
+    __tablename__ = "rss_processed_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    feed_id = Column(Integer, nullable=False)
+    guid = Column(String(1000), nullable=False)
+    title = Column(String(500), default="")
+    link = Column(String(2000), default="")
+    instance_id = Column(Integer, nullable=True)
+    added_at = Column(DateTime, default=datetime.datetime.utcnow)

@@ -70,7 +70,7 @@ export default function RSSManager() {
     }
   }
 
-  const instanceName = (id: number) => instances.find((i: any) => i.id === id)?.name || `#${id}`
+  const instanceName = (id: number) => id === 0 ? '自动分配' : (instances.find((i: any) => i.id === id)?.name || `#${id}`)
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
@@ -141,10 +141,10 @@ export default function RSSManager() {
                   onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ctp-subtext0)', marginBottom: 10 }}>绑定实例</label>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ctp-subtext0)', marginBottom: 10 }}>目标实例</label>
                 <select value={form.instance_id} onChange={(e) => setForm({ ...form, instance_id: Number(e.target.value) })}
                   style={inputStyle}>
-                  <option value={0}>选择实例</option>
+                  <option value={0}>自动（负载均衡）</option>
                   {instances.map((i: any) => <option key={i.id} value={i.id}>{i.name}</option>)}
                 </select>
               </div>

@@ -92,6 +92,18 @@ class QBTClient:
     def add_tags_to_torrents(self, torrent_hashes: str, tags: str):
         self.client.torrents_add_tags(tags=tags, torrent_hashes=torrent_hashes)
 
+    def add_torrent_url(self, url: str, save_path: str = "", tags: str = "", category: str = "") -> bool:
+        """Add a torrent by URL or magnet link. Returns True on success."""
+        kwargs: dict = {"urls": url}
+        if save_path:
+            kwargs["save_path"] = save_path
+        if tags:
+            kwargs["tags"] = tags
+        if category:
+            kwargs["category"] = category
+        result = self.client.torrents_add(**kwargs)
+        return result == "Ok."
+
 
 _instances: dict[int, QBTClient] = {}
 

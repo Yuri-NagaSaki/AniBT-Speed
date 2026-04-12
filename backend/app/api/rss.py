@@ -13,7 +13,7 @@ router = APIRouter()
 class RSSCreate(BaseModel):
     name: str
     url: str
-    instance_id: int
+    instance_id: int = 0  # 0 = auto (load balanced)
     download_path: str = ""
     tag: str = ""
     include_filter: str = ""
@@ -56,21 +56,22 @@ def list_feeds(db: Session = Depends(get_db)):
 
 @router.post("")
 def create_feed(body: RSSCreate, db: Session = Depends(get_db)):
-    inst = db.query(QBTInstance).get(body.instance_id)
-    if not inst:
-        raise HTTPException(status_code=404, detail="Instance not found")
+    if body.instance_id and body.instance_id > 0:
+        inst = db.query(QBTInstance).get(body.instance_id)
+        if not inst:
+            raise HTTPException(status_code=404, detail="Instance not found")
 
     feed = RSSFeed(**body.model_dump())
     db.add(feed)
     db.commit()
     db.refresh(feed)
 
-    # Sync to qBittorrent
-    if feed.enabled:
+    # Sync to qBittorrent native RSS only for fixed-instance feeds
+    if feed.enabled and feed.instance_id and feed.instance_id > 0:
         try:
             _sync_rss_to_qbt(db, feed)
-        except Exception as e:
-            pass  # non-fatal, logged
+        except Exception:
+            pass
 
     return {"id": feed.id, "name": feed.name}
 
@@ -86,7 +87,7 @@ def update_feed(feed_id: int, body: RSSUpdate, db: Session = Depends(get_db)):
         setattr(feed, key, value)
     db.commit()
 
-    if feed.enabled:
+    if feed.enabled and feed.instance_id and feed.instance_id > 0:
         try:
             _sync_rss_to_qbt(db, feed)
         except Exception:
