@@ -43,7 +43,7 @@ def get_traffic(
     hours: int = Query(24, ge=1, le=168),
     db: Session = Depends(get_db),
 ):
-    since = datetime.datetime.utcnow() - datetime.timedelta(hours=hours)
+    since = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=hours)
     query = db.query(TrafficRecord).filter(TrafficRecord.timestamp >= since)
     if instance_id:
         query = query.filter(TrafficRecord.instance_id == instance_id)
@@ -62,7 +62,7 @@ def get_traffic(
 
 @router.get("/summary")
 def get_summary(db: Session = Depends(get_db)):
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.UTC)
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
     today_upload = db.query(func.sum(TrafficRecord.uploaded)).filter(

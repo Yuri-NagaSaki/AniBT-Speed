@@ -87,7 +87,7 @@ def _check_window_exceeded(db: Session, instance_id: int, config: dict) -> bool:
     """Check if sliding window limits are exceeded."""
     import datetime
 
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.UTC)
     hour_ago = now - datetime.timedelta(hours=1)
     day_ago = now - datetime.timedelta(hours=24)
 

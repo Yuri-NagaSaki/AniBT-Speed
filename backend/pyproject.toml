@@ -2,7 +2,7 @@
 name = "anibt-speed-backend"
 version = "0.1.0"
 description = "AniBT-Speed 种群加速管理平台后端"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",

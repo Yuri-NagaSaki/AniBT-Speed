@@ -22,8 +22,8 @@ def login(body: LoginRequest):
 
     payload = {
         "sub": "admin",
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(days=7),
-        "iat": datetime.datetime.utcnow(),
+        "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=7),
+        "iat": datetime.datetime.now(datetime.UTC),
     }
     token = jwt.encode(payload, settings.secret_key, algorithm="HS256")
     return {"token": token}

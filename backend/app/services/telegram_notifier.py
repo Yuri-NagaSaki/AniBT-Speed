@@ -73,7 +73,7 @@ def send_daily_summary():
         from app.models import QBTInstance, TrafficRecord, ActionLog
         from app.services.qbt_client import get_qbt_client
 
-        today_start = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = datetime.datetime.now(datetime.UTC).replace(hour=0, minute=0, second=0, microsecond=0)
 
         # Traffic totals
         records = db.query(TrafficRecord).filter(TrafficRecord.timestamp >= today_start).all()

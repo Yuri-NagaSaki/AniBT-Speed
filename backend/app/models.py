@@ -4,6 +4,10 @@ from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Text, 
 from app.database import Base
 
 
+def _utcnow():
+    return datetime.datetime.now(datetime.UTC)
+
+
 class QBTInstance(Base):
     __tablename__ = "instances"
 
@@ -14,8 +18,8 @@ class QBTInstance(Base):
     password = Column(String(200), nullable=False)
     download_path = Column(String(500), default="")
     enabled = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
 
 class RSSFeed(Base):
@@ -31,7 +35,7 @@ class RSSFeed(Base):
     tag = Column(String(100), default="")
     refresh_interval = Column(Integer, default=5)  # minutes
     enabled = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
 
 
 class PolicySettings(Base):
@@ -40,14 +44,14 @@ class PolicySettings(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     category = Column(String(50), nullable=False, unique=True)  # space, queue, rate_limit, telegram
     config = Column(JSON, nullable=False, default=dict)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
 
 class ActionLog(Base):
     __tablename__ = "action_logs"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    timestamp = Column(DateTime, default=_utcnow)
     action = Column(String(50), nullable=False)  # add, delete, pause, resume, ban, alert
     instance_id = Column(Integer, nullable=True)
     torrent_name = Column(String(500), default="")
@@ -58,7 +62,7 @@ class TrafficRecord(Base):
     __tablename__ = "traffic_records"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    timestamp = Column(DateTime, default=_utcnow)
     instance_id = Column(Integer, nullable=False)
     uploaded = Column(Float, default=0)  # bytes
     downloaded = Column(Float, default=0)  # bytes
@@ -74,4 +78,4 @@ class RSSProcessedItem(Base):
     title = Column(String(500), default="")
     link = Column(String(2000), default="")
     instance_id = Column(Integer, nullable=True)
-    added_at = Column(DateTime, default=datetime.datetime.utcnow)
+    added_at = Column(DateTime, default=_utcnow)
