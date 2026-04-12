@@ -20,12 +20,14 @@ export default function Dashboard() {
     queryKey: ['instances'],
     queryFn: instancesApi.list,
     refetchInterval: 5000,
+    staleTime: 2000,
   })
 
-  const { data: traffic = [] } = useQuery<any[]>({
+  const { data: traffic = [], isLoading: loadingTraffic } = useQuery<any[]>({
     queryKey: ['traffic'],
     queryFn: () => statsApi.traffic(),
     refetchInterval: 60000,
+    staleTime: 30000,
   })
 
   const chartData = traffic.map((r: any) => ({
@@ -34,10 +36,11 @@ export default function Dashboard() {
     download: +(r.downloaded / 1024 / 1024).toFixed(1),
   }))
 
-  const { data: summary } = useQuery({
+  const { data: summary, isLoading: loadingSummary } = useQuery({
     queryKey: ['stats-summary'],
     queryFn: statsApi.summary,
     refetchInterval: 10000,
+    staleTime: 5000,
   })
 
   const connectedInstances = instances.filter((i: any) => i.status?.connected)
@@ -83,46 +86,68 @@ export default function Dashboard() {
       </div>
 
       {/* Today summary */}
-      {summary && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 56, flexWrap: 'wrap' }}>
-          <div>
-            <span style={{ fontSize: 12, display: 'block', marginBottom: 6, color: 'var(--ctp-overlay1)' }}>今日上传</span>
-            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)' }}>{formatBytes(summary.today_uploaded_bytes || 0)}</span>
-          </div>
-          <div style={{ width: 1, height: 28, background: 'var(--ctp-surface1)' }} />
-          <div>
-            <span style={{ fontSize: 12, display: 'block', marginBottom: 6, color: 'var(--ctp-overlay1)' }}>今日下载</span>
-            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)' }}>{formatBytes(summary.today_downloaded_bytes || 0)}</span>
-          </div>
-          <div style={{ width: 1, height: 28, background: 'var(--ctp-surface1)' }} />
-          <div>
-            <span style={{ fontSize: 12, display: 'block', marginBottom: 6, color: 'var(--ctp-overlay1)' }}>今日操作</span>
-            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)' }}>{summary.today_actions || 0}</span>
-          </div>
-        </div>
-      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 56, flexWrap: 'wrap' }}>
+        {loadingSummary ? (
+          <>
+            {[1, 2, 3].map((n) => (
+              <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div>
+                  <div style={{ height: 10, width: 48, borderRadius: 4, background: 'var(--ctp-surface0)', marginBottom: 8 }} />
+                  <div style={{ height: 14, width: 72, borderRadius: 4, background: 'var(--ctp-surface0)' }} />
+                </div>
+                {n < 3 && <div style={{ width: 1, height: 28, background: 'var(--ctp-surface1)' }} />}
+              </div>
+            ))}
+          </>
+        ) : summary ? (
+          <>
+            <div>
+              <span style={{ fontSize: 12, display: 'block', marginBottom: 6, color: 'var(--ctp-overlay1)' }}>今日上传</span>
+              <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)' }}>{formatBytes(summary.today_uploaded_bytes || 0)}</span>
+            </div>
+            <div style={{ width: 1, height: 28, background: 'var(--ctp-surface1)' }} />
+            <div>
+              <span style={{ fontSize: 12, display: 'block', marginBottom: 6, color: 'var(--ctp-overlay1)' }}>今日下载</span>
+              <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)' }}>{formatBytes(summary.today_downloaded_bytes || 0)}</span>
+            </div>
+            <div style={{ width: 1, height: 28, background: 'var(--ctp-surface1)' }} />
+            <div>
+              <span style={{ fontSize: 12, display: 'block', marginBottom: 6, color: 'var(--ctp-overlay1)' }}>今日操作</span>
+              <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)' }}>{summary.today_actions || 0}</span>
+            </div>
+          </>
+        ) : null}
+      </div>
 
       {/* Traffic chart */}
-      {chartData.length > 0 && (
-        <div style={{ marginBottom: 56 }}>
-          <div style={{
-            fontSize: 12,
-            fontWeight: 500,
-            textTransform: 'uppercase' as const,
-            letterSpacing: '0.1em',
-            color: 'var(--ctp-overlay1)',
-            marginBottom: 24,
-          }}>
-            流量趋势
-          </div>
-          <div style={{
-            background: 'var(--ctp-surface0)',
-            border: '1px solid var(--ctp-surface1)',
-            borderRadius: 14,
-            padding: 32,
-          }}>
+      <div style={{ marginBottom: 56 }}>
+        <div style={{
+          fontSize: 12,
+          fontWeight: 500,
+          textTransform: 'uppercase' as const,
+          letterSpacing: '0.1em',
+          color: 'var(--ctp-overlay1)',
+          marginBottom: 24,
+        }}>
+          流量趋势
+        </div>
+        <div style={{
+          background: 'var(--ctp-surface0)',
+          border: '1px solid var(--ctp-surface1)',
+          borderRadius: 14,
+          padding: '24px 32px 32px 32px',
+        }}>
+          {loadingTraffic ? (
+            <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--ctp-overlay0)' }}>加载流量数据...</span>
+            </div>
+          ) : chartData.length === 0 ? (
+            <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--ctp-overlay0)' }}>暂无流量数据</span>
+            </div>
+          ) : (
             <ResponsiveContainer width="100%" height={240}>
-              <AreaChart data={chartData}>
+              <AreaChart data={chartData} margin={{ top: 16, right: 8, bottom: 0, left: 0 }}>
                 <defs>
                   <linearGradient id="uploadGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#a6e3a1" stopOpacity={0.15} />
@@ -146,6 +171,7 @@ export default function Dashboard() {
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v) => `${v} MB`}
+                  width={60}
                 />
                 <Tooltip
                   contentStyle={{
@@ -162,9 +188,9 @@ export default function Dashboard() {
                 <Area type="monotone" dataKey="download" stroke="#94e2d5" strokeWidth={1.5} fill="url(#downloadGrad)" dot={false} />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Instance list */}
       <div>
