@@ -48,8 +48,14 @@ EOF
 }
 
 build_and_start() {
-    info "构建并启动所有服务..."
-    docker compose up -d --build 2>&1
+    if [ "${BUILD_LOCAL:-0}" = "1" ]; then
+        info "本地构建并启动所有服务..."
+        docker compose up -d --build 2>&1
+    else
+        info "拉取预构建镜像并启动所有服务..."
+        docker compose pull 2>&1
+        docker compose up -d 2>&1
+    fi
 
     info "等待服务启动..."
     sleep 5
@@ -109,6 +115,9 @@ main() {
     echo "========================================="
     echo "   AniBT-Speed 一键部署"
     echo "========================================="
+    echo ""
+    echo "  默认: 从 GHCR 拉取预构建镜像（推荐）"
+    echo "  本地构建: BUILD_LOCAL=1 ./deploy.sh"
     echo ""
 
     check_deps
