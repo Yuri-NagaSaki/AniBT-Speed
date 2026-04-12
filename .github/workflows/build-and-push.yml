@@ -8,14 +8,22 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/anibt-speed
 
 permissions:
   contents: read
   packages: write
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      image_prefix: ${{ steps.lower.outputs.prefix }}
+    steps:
+      - id: lower
+        run: echo "prefix=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/anibt-speed" >> "$GITHUB_OUTPUT"
+
   build-backend:
+    needs: prepare
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +39,7 @@ jobs:
       - uses: docker/metadata-action@v5
         id: meta
         with:
-          images: ${{ env.IMAGE_PREFIX }}-backend
+          images: ${{ needs.prepare.outputs.image_prefix }}-backend
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
@@ -50,6 +58,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
   build-frontend:
+    needs: [prepare, build-backend]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -65,7 +74,7 @@ jobs:
       - uses: docker/metadata-action@v5
         id: meta
         with:
-          images: ${{ env.IMAGE_PREFIX }}-frontend
+          images: ${{ needs.prepare.outputs.image_prefix }}-frontend
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
