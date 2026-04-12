@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { rssApi, instancesApi } from '../api/client'
-import { Plus, Trash2, Pencil, X, FolderOpen, Clock, Power } from 'lucide-react'
+import { Plus, Trash2, Pencil, X, FolderOpen, Clock, Power, Tag } from 'lucide-react'
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -21,7 +21,7 @@ export default function RSSManager() {
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState({
-    name: '', url: '', instance_id: 0, download_path: '',
+    name: '', url: '', instance_id: 0, download_path: '', tag: '',
     include_filter: '', exclude_filter: '', refresh_interval: 5, enabled: true,
   })
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
@@ -45,7 +45,7 @@ export default function RSSManager() {
   })
 
   function resetForm() {
-    setForm({ name: '', url: '', instance_id: instances[0]?.id || 0, download_path: '', include_filter: '', exclude_filter: '', refresh_interval: 5, enabled: true })
+    setForm({ name: '', url: '', instance_id: instances[0]?.id || 0, download_path: '', tag: '', include_filter: '', exclude_filter: '', refresh_interval: 5, enabled: true })
     setShowForm(false)
     setEditId(null)
   }
@@ -53,7 +53,7 @@ export default function RSSManager() {
   function handleEdit(feed: any) {
     setForm({
       name: feed.name, url: feed.url, instance_id: feed.instance_id,
-      download_path: feed.download_path || '', include_filter: feed.include_filter || '',
+      download_path: feed.download_path || '', tag: feed.tag || '', include_filter: feed.include_filter || '',
       exclude_filter: feed.exclude_filter || '', refresh_interval: feed.refresh_interval || 5,
       enabled: feed.enabled,
     })
@@ -151,6 +151,13 @@ export default function RSSManager() {
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ctp-subtext0)', marginBottom: 10 }}>下载目录</label>
                 <input value={form.download_path} onChange={(e) => setForm({ ...form, download_path: e.target.value })} placeholder="/AniBt"
+                  style={inputStyle}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-mauve)' }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ctp-subtext0)', marginBottom: 10 }}>自动标签</label>
+                <input value={form.tag} onChange={(e) => setForm({ ...form, tag: e.target.value })} placeholder="如 anibt"
                   style={inputStyle}
                   onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-mauve)' }}
                   onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }} />
@@ -280,6 +287,11 @@ export default function RSSManager() {
                 {feed.download_path && (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                     <FolderOpen size={11} /> {feed.download_path}
+                  </span>
+                )}
+                {feed.tag && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--ctp-mauve)' }}>
+                    <Tag size={11} /> {feed.tag}
                   </span>
                 )}
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>

@@ -28,6 +28,7 @@ class RSSFeed(Base):
     download_path = Column(String(500), default="")
     include_filter = Column(String(1000), default="")
     exclude_filter = Column(String(1000), default="")
+    tag = Column(String(100), default="")
     refresh_interval = Column(Integer, default=5)  # minutes
     enabled = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

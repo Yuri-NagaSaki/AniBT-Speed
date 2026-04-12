@@ -15,6 +15,7 @@ class RSSCreate(BaseModel):
     url: str
     instance_id: int
     download_path: str = ""
+    tag: str = ""
     include_filter: str = ""
     exclude_filter: str = ""
     refresh_interval: int = 5
@@ -26,6 +27,7 @@ class RSSUpdate(BaseModel):
     url: Optional[str] = None
     instance_id: Optional[int] = None
     download_path: Optional[str] = None
+    tag: Optional[str] = None
     include_filter: Optional[str] = None
     exclude_filter: Optional[str] = None
     refresh_interval: Optional[int] = None
@@ -42,6 +44,7 @@ def list_feeds(db: Session = Depends(get_db)):
             "url": f.url,
             "instance_id": f.instance_id,
             "download_path": f.download_path,
+            "tag": f.tag or "",
             "include_filter": f.include_filter,
             "exclude_filter": f.exclude_filter,
             "refresh_interval": f.refresh_interval,
@@ -128,6 +131,13 @@ def _sync_rss_to_qbt(db: Session, feed: RSSFeed):
         pass  # may already exist
 
     # Set auto-download rule
+    # Ensure tag exists in qBT if configured
+    if feed.tag:
+        try:
+            client.create_tags([feed.tag])
+        except Exception:
+            pass
+
     rule = {
         "enabled": feed.enabled,
         "mustContain": feed.include_filter,

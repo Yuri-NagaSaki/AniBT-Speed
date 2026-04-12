@@ -86,6 +86,12 @@ class QBTClient:
     def remove_rss_rule(self, rule_name: str):
         self.client.rss_remove_rule(rule_name=rule_name)
 
+    def create_tags(self, tags: list[str]):
+        self.client.torrents_create_tags(tags=tags)
+
+    def add_tags_to_torrents(self, torrent_hashes: str, tags: str):
+        self.client.torrents_add_tags(tags=tags, torrent_hashes=torrent_hashes)
+
 
 _instances: dict[int, QBTClient] = {}
 
