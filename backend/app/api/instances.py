@@ -40,7 +40,7 @@ def list_instances(db: Session = Depends(get_db)):
             "username": inst.username,
             "download_path": inst.download_path,
             "enabled": inst.enabled,
-            "created_at": inst.created_at.isoformat() if inst.created_at else None,
+            "created_at": (inst.created_at.isoformat() + "Z") if inst.created_at else None,
         }
         if inst.enabled:
             try:
