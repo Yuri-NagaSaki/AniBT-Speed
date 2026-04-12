@@ -1,0 +1,26 @@
+# Environment
+.env
+*.pyc
+__pycache__/
+*.pyo
+
+# Data
+backend/data/*.db
+peerbanhelper/data/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
