@@ -145,17 +145,21 @@
 
 ## 技术架构
 
+所有服务运行在独立的 Docker bridge 网络中，仅前端 Nginx 暴露单一端口供外部访问。后端和 PeerBanHelper 完全隔离在内部网络，通过 Docker DNS 互相通信。前端 Nginx 反向代理 `/api/` 请求到后端。
+
 ```mermaid
 graph TB
-    subgraph 管理平台
-        FE[前端 React 19]
+    subgraph Docker 网络 anibt
+        FE[前端 Nginx]
         BE[后端 FastAPI]
         DB[(SQLite)]
         PBH[PeerBanHelper]
 
-        FE -->|API| BE
+        FE -->|反向代理 /api/| BE
         BE --> DB
     end
+
+    User([用户浏览器]) -->|唯一暴露端口| FE
 
     subgraph 调度任务
         S1[空间检查 5min]
@@ -249,10 +253,20 @@ flowchart TB
 git clone git@github.com:Yuri-NagaSaki/AniBT-Speed.git
 cd AniBT-Speed
 
+# 一键部署（自动生成 .env、构建镜像、启动服务、验证运行状态）
+bash deploy.sh
+
+# 或手动部署
 cp .env.example .env
 # 编辑 .env，设置 SECRET_KEY 和 ADMIN_PASSWORD
+docker compose up -d --build
+```
 
-docker compose up -d
+### 测试
+
+```bash
+# 运行健康检查（容器状态、API 端点、网络隔离、时区、数据持久化）
+bash test.sh
 ```
 
 ### 认证
