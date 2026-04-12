@@ -86,8 +86,9 @@ def _adjust_rate(db: Session, instance: QBTInstance, config: dict):
 def _check_window_exceeded(db: Session, instance_id: int, config: dict) -> bool:
     """Check if sliding window limits are exceeded."""
     import datetime
+    from app.models import SHANGHAI_TZ
 
-    now = datetime.datetime.now(datetime.UTC)
+    now = datetime.datetime.now(SHANGHAI_TZ).replace(tzinfo=None)
     hour_ago = now - datetime.timedelta(hours=1)
     day_ago = now - datetime.timedelta(hours=24)
 

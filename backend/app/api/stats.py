@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.database import get_db
-from app.models import ActionLog, TrafficRecord
+from app.models import ActionLog, TrafficRecord, SHANGHAI_TZ
 
 router = APIRouter()
 
@@ -26,7 +26,7 @@ def get_logs(
         "logs": [
             {
                 "id": log.id,
-                "timestamp": (log.timestamp.isoformat() + "Z") if log.timestamp else None,
+                "timestamp": log.timestamp.isoformat() if log.timestamp else None,
                 "action": log.action,
                 "instance_id": log.instance_id,
                 "torrent_name": log.torrent_name,
@@ -43,7 +43,8 @@ def get_traffic(
     hours: int = Query(24, ge=1, le=168),
     db: Session = Depends(get_db),
 ):
-    since = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=hours)
+    now = datetime.datetime.now(SHANGHAI_TZ).replace(tzinfo=None)
+    since = now - datetime.timedelta(hours=hours)
     query = db.query(TrafficRecord).filter(TrafficRecord.timestamp >= since)
     if instance_id:
         query = query.filter(TrafficRecord.instance_id == instance_id)
@@ -51,7 +52,7 @@ def get_traffic(
     records = query.order_by(TrafficRecord.timestamp.asc()).all()
     return [
         {
-            "timestamp": r.timestamp.isoformat() + "Z",
+            "timestamp": r.timestamp.isoformat(),
             "instance_id": r.instance_id,
             "uploaded": r.uploaded,
             "downloaded": r.downloaded,
@@ -62,8 +63,7 @@ def get_traffic(
 
 @router.get("/summary")
 def get_summary(db: Session = Depends(get_db)):
-    shanghai_tz = datetime.timezone(datetime.timedelta(hours=8))
-    today = datetime.datetime.now(shanghai_tz).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(datetime.timezone.utc).replace(tzinfo=None)
+    today = datetime.datetime.now(SHANGHAI_TZ).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
 
     today_upload = db.query(func.sum(TrafficRecord.uploaded)).filter(
         TrafficRecord.timestamp >= today

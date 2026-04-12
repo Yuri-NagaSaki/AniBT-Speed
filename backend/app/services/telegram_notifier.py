@@ -73,8 +73,8 @@ def send_daily_summary():
         from app.models import QBTInstance, TrafficRecord, ActionLog
         from app.services.qbt_client import get_qbt_client
 
-        shanghai_tz = datetime.timezone(datetime.timedelta(hours=8))
-        today_start = datetime.datetime.now(shanghai_tz).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(datetime.timezone.utc).replace(tzinfo=None)
+        from app.models import SHANGHAI_TZ
+        today_start = datetime.datetime.now(SHANGHAI_TZ).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
 
         # Traffic totals
         records = db.query(TrafficRecord).filter(TrafficRecord.timestamp >= today_start).all()
