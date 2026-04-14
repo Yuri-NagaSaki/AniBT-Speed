@@ -4,6 +4,7 @@ export interface QBTInstance {
   url: string
   username: string
   download_path: string
+  tag: string
   enabled: boolean
   created_at: string | null
   status?: {
@@ -23,7 +24,6 @@ export interface RSSFeed {
   name: string
   url: string
   instance_id: number
-  download_path: string
   include_filter: string
   exclude_filter: string
   refresh_interval: number

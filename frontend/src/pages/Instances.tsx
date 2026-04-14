@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { instancesApi } from '../api/client'
-import { Plus, Trash2, TestTube, Pencil, X, Upload, Download, Loader2, CheckCircle2, XCircle } from 'lucide-react'
+import { Plus, Trash2, TestTube, Pencil, X, Upload, Download, Loader2, CheckCircle2, XCircle, Tag } from 'lucide-react'
 
 function formatSpeed(bytes: number): string {
   if (!bytes) return '0 B/s'
@@ -27,7 +27,7 @@ export default function Instances() {
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
-  const [form, setForm] = useState({ name: '', url: '', username: '', password: '', download_path: '' })
+  const [form, setForm] = useState({ name: '', url: '', username: '', password: '', download_path: '', tag: '' })
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
 
   const { data: instances = [], isLoading } = useQuery({
@@ -85,7 +85,7 @@ export default function Instances() {
   })
 
   function resetForm() {
-    setForm({ name: '', url: '', username: '', password: '', download_path: '' })
+    setForm({ name: '', url: '', username: '', password: '', download_path: '', tag: '' })
     setShowForm(false)
     setEditId(null)
     setFormTestResult(null)
@@ -93,7 +93,7 @@ export default function Instances() {
   }
 
   function handleEdit(inst: any) {
-    setForm({ name: inst.name, url: inst.url, username: inst.username, password: '', download_path: inst.download_path || '' })
+    setForm({ name: inst.name, url: inst.url, username: inst.username, password: '', download_path: inst.download_path || '', tag: inst.tag || '' })
     setEditId(inst.id)
     setShowForm(true)
   }
@@ -191,7 +191,7 @@ export default function Instances() {
                   </div>
                 ))}
               </div>
-              <div style={{ marginBottom: 32 }}>
+              <div style={{ marginBottom: 20 }}>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ctp-subtext0)', marginBottom: 10 }}>
                   下载目录
                 </label>
@@ -199,6 +199,19 @@ export default function Instances() {
                   value={form.download_path}
                   onChange={(e) => setForm({ ...form, download_path: e.target.value })}
                   placeholder="/root/AniBt"
+                  style={inputStyle}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-mauve)' }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }}
+                />
+              </div>
+              <div style={{ marginBottom: 32 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ctp-subtext0)', marginBottom: 10 }}>
+                  自动标签
+                </label>
+                <input
+                  value={form.tag}
+                  onChange={(e) => setForm({ ...form, tag: e.target.value })}
+                  placeholder="如 anibt"
                   style={inputStyle}
                   onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-mauve)' }}
                   onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }}
@@ -312,6 +325,11 @@ export default function Instances() {
                       <Download size={12} /> {formatSpeed(inst.status.dl_speed || 0)}
                     </span>
                     <span style={{ fontSize: 13, color: 'var(--ctp-subtext0)' }}>{inst.status.total || 0} 种子</span>
+                    {inst.tag && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: 'var(--ctp-mauve)' }}>
+                        <Tag size={12} /> {inst.tag}
+                      </span>
+                    )}
                   </>
                 )}
                 {!inst.status?.connected && (

@@ -70,19 +70,19 @@ def _poll_single_feed(db: Session, feed: RSSFeed):
             logger.warning(f"No available instance for RSS item: {title}")
             continue
 
-        # Add torrent to selected instance
+        # Add torrent to selected instance (use instance's configured path and tag)
         try:
             client = get_qbt_client(inst.id, inst.url, inst.username, inst.password)
-            save_path = feed.download_path or inst.download_path or ""
+            save_path = inst.download_path or ""
+            tag = inst.tag or ""
 
-            # Ensure tag exists
-            if feed.tag:
+            if tag:
                 try:
-                    client.create_tags([feed.tag])
+                    client.create_tags([tag])
                 except Exception:
                     pass
 
-            client.add_torrent_url(url=link, save_path=save_path, tags=feed.tag or "")
+            client.add_torrent_url(url=link, save_path=save_path, tags=tag)
 
             # Record as processed
             db.add(RSSProcessedItem(

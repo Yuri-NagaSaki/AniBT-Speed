@@ -16,6 +16,7 @@ class InstanceCreate(BaseModel):
     username: str
     password: str
     download_path: str = ""
+    tag: str = ""
     enabled: bool = True
 
 
@@ -25,6 +26,7 @@ class InstanceUpdate(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
     download_path: Optional[str] = None
+    tag: Optional[str] = None
     enabled: Optional[bool] = None
 
 
@@ -39,6 +41,7 @@ def list_instances(db: Session = Depends(get_db)):
             "url": inst.url,
             "username": inst.username,
             "download_path": inst.download_path,
+            "tag": inst.tag or "",
             "enabled": inst.enabled,
             "created_at": inst.created_at.isoformat() if inst.created_at else None,
         }
@@ -76,6 +79,7 @@ def get_instance(instance_id: int, db: Session = Depends(get_db)):
         "url": inst.url,
         "username": inst.username,
         "download_path": inst.download_path,
+        "tag": inst.tag or "",
         "enabled": inst.enabled,
     }
 

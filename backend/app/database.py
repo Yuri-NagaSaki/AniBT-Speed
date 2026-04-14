@@ -25,13 +25,13 @@ def get_db():
 
 def init_db():
     Base.metadata.create_all(bind=engine)
-    # Migrate: add 'tag' column to rss_feeds if missing
+    # Migrate: add 'tag' column to instances if missing
     import sqlite3
     db_path = engine.url.database
     conn = sqlite3.connect(db_path)
-    cursor = conn.execute("PRAGMA table_info(rss_feeds)")
+    cursor = conn.execute("PRAGMA table_info(instances)")
     columns = [row[1] for row in cursor.fetchall()]
     if "tag" not in columns:
-        conn.execute("ALTER TABLE rss_feeds ADD COLUMN tag VARCHAR(100) DEFAULT ''")
+        conn.execute("ALTER TABLE instances ADD COLUMN tag VARCHAR(100) DEFAULT ''")
         conn.commit()
     conn.close()

@@ -19,6 +19,7 @@ class QBTInstance(Base):
     username = Column(String(100), nullable=False)
     password = Column(String(200), nullable=False)
     download_path = Column(String(500), default="")
+    tag = Column(String(100), default="")
     enabled = Column(Boolean, default=True)
     created_at = Column(DateTime, default=_now_shanghai)
     updated_at = Column(DateTime, default=_now_shanghai, onupdate=_now_shanghai)
@@ -31,10 +32,8 @@ class RSSFeed(Base):
     name = Column(String(200), nullable=False)
     url = Column(String(1000), nullable=False)
     instance_id = Column(Integer, nullable=False)
-    download_path = Column(String(500), default="")
     include_filter = Column(String(1000), default="")
     exclude_filter = Column(String(1000), default="")
-    tag = Column(String(100), default="")
     refresh_interval = Column(Integer, default=5)  # minutes
     enabled = Column(Boolean, default=True)
     created_at = Column(DateTime, default=_now_shanghai)

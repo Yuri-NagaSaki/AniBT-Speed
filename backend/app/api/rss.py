@@ -14,8 +14,6 @@ class RSSCreate(BaseModel):
     name: str
     url: str
     instance_id: int = 0  # 0 = auto (load balanced)
-    download_path: str = ""
-    tag: str = ""
     include_filter: str = ""
     exclude_filter: str = ""
     refresh_interval: int = 5
@@ -26,8 +24,6 @@ class RSSUpdate(BaseModel):
     name: Optional[str] = None
     url: Optional[str] = None
     instance_id: Optional[int] = None
-    download_path: Optional[str] = None
-    tag: Optional[str] = None
     include_filter: Optional[str] = None
     exclude_filter: Optional[str] = None
     refresh_interval: Optional[int] = None
@@ -43,8 +39,6 @@ def list_feeds(db: Session = Depends(get_db)):
             "name": f.name,
             "url": f.url,
             "instance_id": f.instance_id,
-            "download_path": f.download_path,
-            "tag": f.tag or "",
             "include_filter": f.include_filter,
             "exclude_filter": f.exclude_filter,
             "refresh_interval": f.refresh_interval,
@@ -132,10 +126,10 @@ def _sync_rss_to_qbt(db: Session, feed: RSSFeed):
         pass  # may already exist
 
     # Set auto-download rule
-    # Ensure tag exists in qBT if configured
-    if feed.tag:
+    # Use instance's tag
+    if inst.tag:
         try:
-            client.create_tags([feed.tag])
+            client.create_tags([inst.tag])
         except Exception:
             pass
 
@@ -143,7 +137,7 @@ def _sync_rss_to_qbt(db: Session, feed: RSSFeed):
         "enabled": feed.enabled,
         "mustContain": feed.include_filter,
         "mustNotContain": feed.exclude_filter,
-        "savePath": feed.download_path or inst.download_path,
+        "savePath": inst.download_path,
         "affectedFeeds": [feed.url],
     }
     client.set_rss_rule(rule_name=f"anibt-speed-{feed.id}", rule_def=rule)
