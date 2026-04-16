@@ -1,8 +1,12 @@
 from typing import Optional
+import time
 import qbittorrentapi
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Session stays valid for 5 minutes before forcing a re-login
+_SESSION_TTL = 300
 
 
 class QBTClient:
@@ -13,8 +17,12 @@ class QBTClient:
         self.username = username
         self.password = password
         self._client: Optional[qbittorrentapi.Client] = None
+        self._connected_at: float = 0
 
-    def _connect(self) -> qbittorrentapi.Client:
+    def _connect(self, force: bool = False) -> qbittorrentapi.Client:
+        now = time.monotonic()
+        if not force and self._client and (now - self._connected_at) < _SESSION_TTL:
+            return self._client
         host = self.url.rstrip("/")
         self._client = qbittorrentapi.Client(
             host=host,
@@ -23,15 +31,27 @@ class QBTClient:
             VERIFY_WEBUI_CERTIFICATE=False,
         )
         self._client.auth_log_in()
+        self._connected_at = now
         return self._client
+
+    def _ensure_client(self) -> qbittorrentapi.Client:
+        """Get client, reconnecting on auth/connection errors."""
+        try:
+            c = self._connect()
+            # Probe to verify the session is still alive
+            c.app.version
+            return c
+        except (qbittorrentapi.Forbidden403Error, qbittorrentapi.APIConnectionError):
+            logger.debug("Session expired or connection lost, reconnecting...")
+            return self._connect(force=True)
 
     @property
     def client(self) -> qbittorrentapi.Client:
-        return self._connect()
+        return self._ensure_client()
 
     def test_connection(self) -> dict:
         try:
-            c = self._connect()
+            c = self._connect(force=True)
             version = c.app.version
             return {"success": True, "version": version}
         except Exception as e:
@@ -105,9 +125,12 @@ _instances: dict[int, QBTClient] = {}
 
 
 def get_qbt_client(instance_id: int, url: str, username: str, password: str) -> QBTClient:
-    if instance_id not in _instances:
-        _instances[instance_id] = QBTClient(url, username, password)
-    return _instances[instance_id]
+    existing = _instances.get(instance_id)
+    if existing and existing.url == url and existing.username == username and existing.password == password:
+        return existing
+    client = QBTClient(url, username, password)
+    _instances[instance_id] = client
+    return client
 
 
 def remove_qbt_client(instance_id: int):

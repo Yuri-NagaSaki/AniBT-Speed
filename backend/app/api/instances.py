@@ -63,10 +63,25 @@ def list_instances(db: Session = Depends(get_db)):
         if inst.enabled:
             try:
                 client = get_qbt_client(inst.id, inst.url, inst.username, inst.password)
-                status = client.get_status()
-                counts = client.get_torrent_count()
-                data["status"] = {**status, **counts, "connected": True}
-            except Exception:
+                c = client.client  # single connection for both calls
+                info = c.transfer_info()
+                torrents = c.torrents.info()
+                active = sum(1 for t in torrents if t.state in ("uploading", "downloading", "stalledUP", "stalledDL"))
+                paused = sum(1 for t in torrents if t.state in ("pausedUP", "pausedDL"))
+                data["status"] = {
+                    "connected": True,
+                    "dl_speed": info.get("dl_info_speed", 0),
+                    "up_speed": info.get("up_info_speed", 0),
+                    "dl_total": info.get("dl_info_data", 0),
+                    "up_total": info.get("up_info_data", 0),
+                    "connection_status": info.get("connection_status", "unknown"),
+                    "total": len(torrents),
+                    "active": active,
+                    "paused": paused,
+                }
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to connect to instance {inst.name}: {e}")
                 data["status"] = {"connected": False}
         else:
             data["status"] = {"connected": False}

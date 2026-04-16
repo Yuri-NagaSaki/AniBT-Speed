@@ -288,6 +288,64 @@ bash test.sh
 | Telegram | 配置 Bot Token 和 Chat ID，各事件通知开关，发送测试消息 |
 | 日志 | 查看管理操作日志（添加、删除、暂停、恢复、告警等） |
 
+---
+
+## MediaInfo Agent（独立部署）
+
+在每台 qBittorrent 服务器上部署的独立代理，自动为已完成的种子生成 MediaInfo 并推送到 Citrus（AniBT）站点展示。
+
+### 工作流程
+
+```
+qBT 完成下载 → Agent 检测到已完成种子 → 本地运行 mediainfo CLI → 解析结构化数据 → PUT 到 Citrus API
+```
+
+### 特点
+
+- **本地运行**：直接在 qBT 服务器上运行，无需 SSH 远程执行
+- **info_hash 匹配**：通过种子 info_hash 自动匹配 Citrus 上的 Release，无需手动指定 releaseId
+- **自动重试**：推送失败的种子在下次检查周期自动重试
+- **路径映射**：支持 Docker qBT 容器路径到主机路径的映射（`PATH_MAPPING=/media:/hdd/media`）
+- **SQLite 记录**：已处理种子记录在 `~/.mediainfo-agent/processed.db`，避免重复处理
+
+### 部署
+
+代理脚本位于 `scripts/mediainfo-agent/`：
+
+```bash
+# 复制到目标 qBT 服务器
+scp -r scripts/mediainfo-agent/ root@your-qbt-server:/tmp/
+
+# 在 qBT 服务器上执行安装（自动安装 mediainfo、Python 依赖、创建 systemd 服务）
+ssh root@your-qbt-server "bash /tmp/mediainfo-agent/install.sh"
+
+# 编辑配置
+ssh root@your-qbt-server "vim /etc/mediainfo-agent/config.env"
+```
+
+### 配置项（`/etc/mediainfo-agent/config.env`）
+
+| 变量 | 说明 | 示例 |
+|------|------|------|
+| `QBT_URL` | qBittorrent WebUI 地址 | `http://localhost:8080` |
+| `QBT_USERNAME` | qBT 用户名 | `admin` |
+| `QBT_PASSWORD` | qBT 密码 | `your-password` |
+| `CITRUS_API_URL` | Citrus 站点地址 | `https://site.anibt.net` |
+| `CITRUS_MEDIAINFO_TOKEN` | Citrus API 令牌 | `your-token` |
+| `PATH_MAPPING` | 路径映射（Docker qBT 用） | `/media:/hdd/media` |
+| `CHECK_INTERVAL` | 检查间隔（秒） | `300` |
+
+### 管理命令
+
+```bash
+systemctl status mediainfo-agent     # 查看状态
+systemctl restart mediainfo-agent    # 重启
+journalctl -u mediainfo-agent -f     # 实时日志
+journalctl -u mediainfo-agent -n 50  # 最近 50 行日志
+```
+
+---
+
 ## License
 
 MIT
