@@ -331,7 +331,7 @@ ssh root@your-qbt-server "vim /etc/mediainfo-agent/config.env"
 | `QBT_USERNAME` | qBT 用户名 | `admin` |
 | `QBT_PASSWORD` | qBT 密码 | `your-password` |
 | `CITRUS_API_URL` |  站点地址 | `https://domain` |
-| `CITRUS_MEDIAINFO_TOKEN` | Citrus API 令牌 | `your-token` |
+| `CITRUS_MEDIAINFO_TOKEN` |  API 令牌 | `your-token` |
 | `PATH_MAPPING` | 路径映射（Docker qBT 用） | `/media:/hdd/media` |
 | `CHECK_INTERVAL` | 检查间隔（秒） | `300` |
 
