@@ -17,6 +17,7 @@ DEFAULT_SPACE_CONFIG = {
     "protect_hours": 8,
     "boundary_hours": 12,
     "max_torrent_size_gb": 0,  # 0 = no limit
+    "max_deletions_per_run": 20,
     "check_path": "/root/AniBt",
     "check_interval_minutes": 5,
 }
@@ -92,8 +93,14 @@ def _cleanup_instance(db: Session, instance: QBTInstance, config: dict):
         old_range.sort(key=lambda t: t.ratio, reverse=True)
 
         candidates = mid_range + old_range
+        max_deletions = config.get("max_deletions_per_run", 20)
+        deleted = 0
 
         for t in candidates:
+            if deleted >= max_deletions:
+                logger.warning(f"Reached max deletion limit ({max_deletions}) for {instance.name}, stopping cleanup")
+                break
+
             usage = shutil.disk_usage(config["check_path"])
             if (usage.used / usage.total) * 100 < config["threshold_percent"]:
                 break
@@ -109,6 +116,7 @@ def _cleanup_instance(db: Session, instance: QBTInstance, config: dict):
             ))
             db.commit()
 
+            deleted += 1
             send_notification(
                 f"🗑 <b>空间清理</b>\n"
                 f"实例: {instance.name}\n"

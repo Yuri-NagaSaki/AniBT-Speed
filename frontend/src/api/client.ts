@@ -11,6 +11,14 @@ export function setToken(token: string) {
 }
 
 export function clearToken() {
+  const token = localStorage.getItem(TOKEN_KEY)
+  if (token) {
+    // Revoke token server-side (fire-and-forget)
+    fetch(`${API_BASE}/auth/logout`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+    }).catch(() => {})
+  }
   localStorage.removeItem(TOKEN_KEY)
 }
 

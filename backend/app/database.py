@@ -24,14 +24,23 @@ def get_db():
 
 
 def init_db():
+    import logging
+    logger = logging.getLogger(__name__)
+
     Base.metadata.create_all(bind=engine)
+
     # Migrate: add 'tag' column to instances if missing
     import sqlite3
     db_path = engine.url.database
-    conn = sqlite3.connect(db_path)
-    cursor = conn.execute("PRAGMA table_info(instances)")
-    columns = [row[1] for row in cursor.fetchall()]
-    if "tag" not in columns:
-        conn.execute("ALTER TABLE instances ADD COLUMN tag VARCHAR(100) DEFAULT ''")
-        conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.execute("PRAGMA table_info(instances)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if "tag" not in columns:
+            conn.execute("ALTER TABLE instances ADD COLUMN tag VARCHAR(100) DEFAULT ''")
+            conn.commit()
+            logger.info("Database migration: added 'tag' column to instances")
+        conn.close()
+    except Exception as e:
+        logger.error(f"Database migration error: {e}")
+        raise

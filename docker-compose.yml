@@ -6,8 +6,9 @@ services:
       dockerfile: Dockerfile
     container_name: anibt-speed-backend
     environment:
-      - SECRET_KEY=${SECRET_KEY:-change-me}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - SECRET_KEY=${SECRET_KEY}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
       - TZ=Asia/Shanghai
     volumes:
       - ./backend/data:/app/data

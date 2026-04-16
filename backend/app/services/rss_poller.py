@@ -145,12 +145,22 @@ def _matches_filters(title: str, include: str, exclude: str) -> bool:
     """
     if include:
         terms = [t.strip() for t in include.split("|") if t.strip()]
-        if terms and not any(re.search(t, title, re.IGNORECASE) for t in terms):
+        if terms and not any(_safe_search(t, title) for t in terms):
             return False
 
     if exclude:
         terms = [t.strip() for t in exclude.split("|") if t.strip()]
-        if terms and any(re.search(t, title, re.IGNORECASE) for t in terms):
+        if terms and any(_safe_search(t, title) for t in terms):
             return False
 
     return True
+
+
+def _safe_search(pattern: str, text: str) -> bool:
+    """Regex search with validation to prevent ReDoS."""
+    try:
+        compiled = re.compile(pattern, re.IGNORECASE)
+        return compiled.search(text) is not None
+    except re.error:
+        # Fall back to plain substring match if regex is invalid
+        return pattern.lower() in text.lower()

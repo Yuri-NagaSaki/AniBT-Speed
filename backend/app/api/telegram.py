@@ -26,22 +26,28 @@ class TelegramConfig(BaseModel):
 @router.get("")
 def get_config(db: Session = Depends(get_db)):
     row = db.query(PolicySettings).filter_by(category="telegram").first()
-    if row:
-        return {**DEFAULT_TELEGRAM_CONFIG, **row.config}
-    return DEFAULT_TELEGRAM_CONFIG
+    config = {**DEFAULT_TELEGRAM_CONFIG, **(row.config if row else {})}
+    # Mask bot_token in API response to prevent leakage
+    if config.get("bot_token"):
+        token = config["bot_token"]
+        config["bot_token"] = token[:8] + "***" + token[-4:] if len(token) > 12 else "***"
+    return config
 
 
 @router.put("")
 def update_config(body: TelegramConfig, db: Session = Depends(get_db)):
     config_data = body.model_dump()
     row = db.query(PolicySettings).filter_by(category="telegram").first()
+    # If bot_token looks masked (contains ***), preserve the existing token
+    if "***" in config_data.get("bot_token", "") and row and row.config.get("bot_token"):
+        config_data["bot_token"] = row.config["bot_token"]
     if row:
         row.config = config_data
     else:
         row = PolicySettings(category="telegram", config=config_data)
         db.add(row)
     db.commit()
-    return config_data
+    return {"ok": True}
 
 
 @router.post("/test")
