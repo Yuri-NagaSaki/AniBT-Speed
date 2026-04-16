@@ -32,6 +32,29 @@ def get_rate_config(db: Session) -> dict:
     return DEFAULT_RATE_CONFIG.copy()
 
 
+def record_traffic():
+    """Periodic task: record traffic data for all connected instances (independent of rate limiting)."""
+    db = SessionLocal()
+    try:
+        instances = db.query(QBTInstance).filter_by(enabled=True).all()
+        for inst in instances:
+            try:
+                client = get_qbt_client(inst.id, inst.url, inst.username, inst.password)
+                status = client.get_status()
+                db.add(TrafficRecord(
+                    instance_id=inst.id,
+                    uploaded=status["up_speed"] * 60,
+                    downloaded=status["dl_speed"] * 60,
+                ))
+            except Exception as e:
+                logger.debug(f"Traffic recording skipped for {inst.name}: {e}")
+        db.commit()
+    except Exception as e:
+        logger.error(f"Traffic recording error: {e}")
+    finally:
+        db.close()
+
+
 def check_rate():
     """Periodic task: adjust speed limits based on current state."""
     db = SessionLocal()
@@ -70,14 +93,6 @@ def _adjust_rate(db: Session, instance: QBTInstance, config: dict):
             dl = 0  # no download limit when only seeding
 
         client.set_speed_limits(dl_limit=dl, up_limit=ul)
-
-        # Record traffic for sliding window
-        db.add(TrafficRecord(
-            instance_id=instance.id,
-            uploaded=status["up_speed"] * 60,  # approximate bytes in last minute
-            downloaded=status["dl_speed"] * 60,
-        ))
-        db.commit()
 
     except Exception as e:
         logger.error(f"Rate adjustment error for {instance.name}: {e}")
