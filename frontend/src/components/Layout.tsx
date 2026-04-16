@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from '@tanstack/react-router'
 import { clearToken } from '../api/client'
 import {
   LayoutDashboard, Server, Rss, HardDrive,
-  ListOrdered, Gauge, MessageSquare, ScrollText, LogOut,
+  ListOrdered, Gauge, MessageSquare, ScrollText, LogOut, FileVideo,
 } from 'lucide-react'
 
 const navItems = [
@@ -14,6 +14,7 @@ const navItems = [
   { path: '/queue-policy', label: '队列策略', icon: ListOrdered },
   { path: '/rate-limit', label: '限速策略', icon: Gauge },
   { path: '/telegram', label: 'Telegram', icon: MessageSquare },
+  { path: '/mediainfo', label: 'MediaInfo', icon: FileVideo },
   { path: '/logs', label: '日志', icon: ScrollText },
 ]
 

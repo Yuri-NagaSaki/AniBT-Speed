@@ -17,6 +17,7 @@ import QueuePolicy from './pages/QueuePolicy'
 import RateLimit from './pages/RateLimit'
 import Telegram from './pages/Telegram'
 import Logs from './pages/Logs'
+import MediaInfo from './pages/MediaInfo'
 
 function AuthGuard({ children }: { children: ReactNode }) {
   if (!getToken()) {
@@ -56,6 +57,7 @@ const queueRoute = createRoute({ getParentRoute: () => layoutRoute, path: '/queu
 const rateRoute = createRoute({ getParentRoute: () => layoutRoute, path: '/rate-limit', component: RateLimit })
 const telegramRoute = createRoute({ getParentRoute: () => layoutRoute, path: '/telegram', component: Telegram })
 const logsRoute = createRoute({ getParentRoute: () => layoutRoute, path: '/logs', component: Logs })
+const mediaInfoRoute = createRoute({ getParentRoute: () => layoutRoute, path: '/mediainfo', component: MediaInfo })
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
@@ -67,6 +69,7 @@ const routeTree = rootRoute.addChildren([
     queueRoute,
     rateRoute,
     telegramRoute,
+    mediaInfoRoute,
     logsRoute,
   ]),
 ])

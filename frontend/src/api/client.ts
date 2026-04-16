@@ -108,3 +108,15 @@ export const telegramApi = {
   update: (data: any) => request('/telegram', { method: 'PUT', body: JSON.stringify(data) }),
   test: () => request<any>('/telegram/test', { method: 'POST' }),
 }
+
+// MediaInfo
+export const mediaInfoApi = {
+  status: () => request<{ total: number; sent_to_citrus: number; errors: number; pending: number }>('/mediainfo/status'),
+  trigger: () => request<{ ok: boolean; message?: string; error?: string }>('/mediainfo/trigger', { method: 'POST' }),
+  records: (params?: { limit?: number; offset?: number }) => {
+    const qs = new URLSearchParams()
+    if (params?.limit) qs.set('limit', String(params.limit))
+    if (params?.offset) qs.set('offset', String(params.offset))
+    return request<any[]>(`/mediainfo/records?${qs}`)
+  },
+}
