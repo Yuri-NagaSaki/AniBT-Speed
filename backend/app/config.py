@@ -17,10 +17,6 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/anibt_speed.db"
     cors_origins: str = ""
 
-    # Citrus MediaInfo API
-    citrus_api_url: str = ""
-    citrus_mediainfo_token: str = ""
-
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

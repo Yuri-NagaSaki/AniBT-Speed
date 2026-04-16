@@ -9,7 +9,7 @@ import type { ReactNode } from 'react'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import { getToken } from './api/client'
-import { instancesApi, statsApi, rssApi, settingsApi, telegramApi, mediaInfoApi } from './api/client'
+import { instancesApi, statsApi, rssApi, settingsApi, telegramApi } from './api/client'
 import { queryClient } from './main'
 import Dashboard from './pages/Dashboard'
 import Instances from './pages/Instances'
@@ -19,7 +19,6 @@ import QueuePolicy from './pages/QueuePolicy'
 import RateLimit from './pages/RateLimit'
 import Telegram from './pages/Telegram'
 import Logs from './pages/Logs'
-import MediaInfo from './pages/MediaInfo'
 
 function AuthGuard({ children }: { children: ReactNode }) {
   if (!getToken()) {
@@ -118,15 +117,6 @@ const logsRoute = createRoute({
     queryClient.prefetchQuery({ queryKey: ['logs', undefined, 0], queryFn: () => statsApi.logs({ limit: 30, offset: 0 }), staleTime: 10000 })
   },
 })
-const mediaInfoRoute = createRoute({
-  getParentRoute: () => layoutRoute,
-  path: '/mediainfo',
-  component: MediaInfo,
-  loader: () => {
-    queryClient.prefetchQuery({ queryKey: ['mediainfo-status'], queryFn: mediaInfoApi.status, staleTime: 15000 })
-    queryClient.prefetchQuery({ queryKey: ['mediainfo-records', 0], queryFn: () => mediaInfoApi.records({ limit: 30, offset: 0 }), staleTime: 15000 })
-  },
-})
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
@@ -138,7 +128,6 @@ const routeTree = rootRoute.addChildren([
     queueRoute,
     rateRoute,
     telegramRoute,
-    mediaInfoRoute,
     logsRoute,
   ]),
 ])
