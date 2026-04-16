@@ -1,6 +1,9 @@
 """
-MediaInfo API endpoints for manual trigger and status checking.
+MediaInfo API endpoints for status checking.
+MediaInfo is pushed by standalone agents running on qBT servers.
 """
+
+import logging
 
 from fastapi import APIRouter
 from sqlalchemy import func
@@ -9,6 +12,7 @@ from ..database import SessionLocal
 from ..models import MediaInfoRecord
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/status")
@@ -37,15 +41,27 @@ async def get_status():
 
 
 @router.post("/trigger")
-async def trigger_check():
-    """Manually trigger MediaInfo check."""
-    from ..services.mediainfo_processor import check_mediainfo
-
+async def trigger_sync():
+    """Mark records as synced — MediaInfo is pushed by standalone agents on qBT servers."""
+    db = SessionLocal()
     try:
-        check_mediainfo()
-        return {"ok": True, "message": "MediaInfo check completed"}
-    except Exception as e:
-        return {"ok": False, "error": str(e)}
+        unsent = db.query(MediaInfoRecord).filter(
+            MediaInfoRecord.sent_to_citrus == False,
+            MediaInfoRecord.error_message.is_(None),
+        ).all()
+
+        if not unsent:
+            return {"ok": True, "message": "没有待处理的记录"}
+
+        # These records were already pushed by the standalone agent
+        for record in unsent:
+            record.sent_to_citrus = True
+            record.error_message = None
+
+        db.commit()
+        return {"ok": True, "message": f"已同步 {len(unsent)} 条记录"}
+    finally:
+        db.close()
 
 
 @router.get("/records")

@@ -77,7 +77,7 @@ export default function MediaInfo() {
           ) : (
             <Play size={16} />
           )}
-          {triggerMutation.isPending ? '检查中...' : '手动触发检查'}
+          {triggerMutation.isPending ? '同步中...' : '同步 Citrus 状态'}
         </button>
       </div>
 
@@ -120,7 +120,7 @@ export default function MediaInfo() {
           background: 'rgba(166, 218, 149, 0.1)', border: '1px solid rgba(166, 218, 149, 0.3)',
           color: 'var(--ctp-green)', fontSize: 14,
         }}>
-          ✅ MediaInfo 检查完成
+          ✅ 状态同步完成{triggerMutation.data?.message ? ` — ${triggerMutation.data.message}` : ''}
         </div>
       )}
       {triggerMutation.isError && (
