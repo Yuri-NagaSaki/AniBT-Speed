@@ -18,6 +18,11 @@ class InstanceCreate(BaseModel):
     download_path: str = ""
     tag: str = ""
     enabled: bool = True
+    ssh_host: str = ""
+    ssh_port: int = 22
+    ssh_user: str = "root"
+    ssh_key_path: str = ""
+    path_mapping: Optional[dict] = None
 
 
 class InstanceUpdate(BaseModel):
@@ -28,6 +33,11 @@ class InstanceUpdate(BaseModel):
     download_path: Optional[str] = None
     tag: Optional[str] = None
     enabled: Optional[bool] = None
+    ssh_host: Optional[str] = None
+    ssh_port: Optional[int] = None
+    ssh_user: Optional[str] = None
+    ssh_key_path: Optional[str] = None
+    path_mapping: Optional[dict] = None
 
 
 @router.get("")
@@ -43,6 +53,11 @@ def list_instances(db: Session = Depends(get_db)):
             "download_path": inst.download_path,
             "tag": inst.tag or "",
             "enabled": inst.enabled,
+            "ssh_host": inst.ssh_host or "",
+            "ssh_port": inst.ssh_port or 22,
+            "ssh_user": inst.ssh_user or "root",
+            "ssh_key_path": inst.ssh_key_path or "",
+            "path_mapping": inst.path_mapping,
             "created_at": inst.created_at.isoformat() if inst.created_at else None,
         }
         if inst.enabled:

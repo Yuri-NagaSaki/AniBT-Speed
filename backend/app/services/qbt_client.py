@@ -15,18 +15,14 @@ class QBTClient:
         self._client: Optional[qbittorrentapi.Client] = None
 
     def _connect(self) -> qbittorrentapi.Client:
-        if self._client is None:
-            host = self.url.rstrip("/")
-            self._client = qbittorrentapi.Client(
-                host=host,
-                username=self.username,
-                password=self.password,
-            )
-        try:
-            self._client.auth_log_in()
-        except Exception:
-            self._client = None
-            raise
+        host = self.url.rstrip("/")
+        self._client = qbittorrentapi.Client(
+            host=host,
+            username=self.username,
+            password=self.password,
+            VERIFY_WEBUI_CERTIFICATE=False,
+        )
+        self._client.auth_log_in()
         return self._client
 
     @property

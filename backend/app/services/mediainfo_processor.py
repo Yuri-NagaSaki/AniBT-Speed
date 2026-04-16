@@ -2,12 +2,13 @@
 MediaInfo Processor Service
 
 Scans completed torrents across qBT instances, generates MediaInfo
-using the mediainfo CLI, and pushes structured data to Citrus API.
+via SSH on remote servers, and pushes structured data to Citrus API.
 """
 
 import json
 import logging
 import os
+import shlex
 import subprocess
 from typing import Optional
 
@@ -45,6 +46,9 @@ def _process_all_instances(db: Session):
         return
 
     for instance in instances:
+        if not instance.ssh_host:
+            logger.debug(f"Skipping instance {instance.name}: no SSH config")
+            continue
         try:
             _process_instance(db, instance)
         except Exception as e:
@@ -85,6 +89,35 @@ def _process_instance(db: Session, instance: QBTInstance):
             _save_error(db, torrent_hash, instance.id, str(e), existing)
 
 
+def _map_path(instance: QBTInstance, container_path: str) -> str:
+    """Apply path mapping from container path to host path."""
+    mapping = instance.path_mapping
+    if not mapping:
+        return container_path
+    from_prefix = mapping.get("from", "")
+    to_prefix = mapping.get("to", "")
+    if from_prefix and container_path.startswith(from_prefix):
+        return to_prefix + container_path[len(from_prefix):]
+    return container_path
+
+
+def _build_ssh_cmd(instance: QBTInstance, remote_cmd: str) -> list[str]:
+    """Build SSH command with instance config."""
+    cmd = [
+        "ssh",
+        "-o", "StrictHostKeyChecking=no",
+        "-o", "ConnectTimeout=10",
+        "-o", "BatchMode=yes",
+    ]
+    if instance.ssh_key_path:
+        cmd.extend(["-i", instance.ssh_key_path])
+    if instance.ssh_port and instance.ssh_port != 22:
+        cmd.extend(["-p", str(instance.ssh_port)])
+    cmd.append(f"{instance.ssh_user or 'root'}@{instance.ssh_host}")
+    cmd.append(remote_cmd)
+    return cmd
+
+
 def _process_torrent(
     db: Session,
     instance: QBTInstance,
@@ -98,12 +131,15 @@ def _process_torrent(
     content_path = torrent.get("content_path", "")
     save_path = torrent.get("save_path", "")
 
-    video_path = _find_video_file(content_path, save_path)
+    host_content = _map_path(instance, content_path) if content_path else ""
+    host_save = _map_path(instance, save_path) if save_path else ""
+
+    video_path = _find_video_file_ssh(instance, host_content, host_save)
     if not video_path:
         logger.debug(f"No video file found for torrent {torrent_hash}")
         return
 
-    raw_json = _run_mediainfo(video_path)
+    raw_json = _run_mediainfo_ssh(instance, video_path)
     if not raw_json:
         return
 
@@ -154,57 +190,67 @@ def _find_release_id(db: Session, torrent: dict) -> Optional[str]:
     return None
 
 
-def _find_video_file(content_path: str, save_path: str) -> Optional[str]:
-    """Find the main video file in a torrent's download path."""
+def _find_video_file_ssh(
+    instance: QBTInstance, content_path: str, save_path: str
+) -> Optional[str]:
+    """Find the main video file on a remote server via SSH."""
     if not content_path and not save_path:
         return None
 
     path = content_path or save_path
+    escaped_path = shlex.quote(path)
 
-    if os.path.isfile(path):
-        ext = os.path.splitext(path)[1].lower()
-        return path if ext in VIDEO_EXTENSIONS else None
+    # Check if it's a file and has video extension
+    ext = os.path.splitext(path)[1].lower()
+    if ext in VIDEO_EXTENSIONS:
+        check_cmd = f"test -f {escaped_path} && echo EXISTS"
+        ssh_cmd = _build_ssh_cmd(instance, check_cmd)
+        try:
+            result = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=15)
+            if "EXISTS" in result.stdout:
+                return path
+        except Exception as e:
+            logger.error(f"SSH error checking file {path}: {e}")
+        return None
 
-    if os.path.isdir(path):
-        video_files = []
-        for root, _, files in os.walk(path):
-            for f in files:
-                ext = os.path.splitext(f)[1].lower()
-                if ext in VIDEO_EXTENSIONS:
-                    full_path = os.path.join(root, f)
-                    try:
-                        size = os.path.getsize(full_path)
-                        video_files.append((full_path, size))
-                    except OSError:
-                        continue
-        if video_files:
-            video_files.sort(key=lambda x: x[1], reverse=True)
-            return video_files[0][0]
+    # It's a directory — find the largest video file
+    find_cmd = (
+        f"find {escaped_path} -maxdepth 3 -type f "
+        f"\\( -name '*.mkv' -o -name '*.mp4' -o -name '*.avi' -o -name '*.ts' -o -name '*.m2ts' -o -name '*.webm' \\) "
+        f"-printf '%s %p\\n' 2>/dev/null | sort -rn | head -1"
+    )
+    ssh_cmd = _build_ssh_cmd(instance, find_cmd)
+    try:
+        result = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=15)
+        output = result.stdout.strip()
+        if output:
+            # Format: "size /path/to/file"
+            parts = output.split(" ", 1)
+            if len(parts) == 2:
+                return parts[1]
+    except Exception as e:
+        logger.error(f"SSH error finding video in {path}: {e}")
 
     return None
 
 
-def _run_mediainfo(file_path: str) -> Optional[str]:
-    """Run mediainfo CLI and return JSON output."""
+def _run_mediainfo_ssh(instance: QBTInstance, file_path: str) -> Optional[str]:
+    """Run mediainfo on a remote server via SSH."""
+    escaped_path = shlex.quote(file_path)
+    remote_cmd = f"mediainfo --Output=JSON {escaped_path}"
+    ssh_cmd = _build_ssh_cmd(instance, remote_cmd)
+
     try:
-        result = subprocess.run(
-            ["mediainfo", "--Output=JSON", file_path],
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
+        result = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=120)
         if result.returncode != 0:
-            logger.error(f"mediainfo failed for {file_path}: {result.stderr}")
+            logger.error(f"Remote mediainfo failed for {file_path}: {result.stderr}")
             return None
         return result.stdout
     except subprocess.TimeoutExpired:
-        logger.error(f"mediainfo timed out for {file_path}")
-        return None
-    except FileNotFoundError:
-        logger.error("mediainfo CLI not found. Please install: apt-get install mediainfo")
+        logger.error(f"Remote mediainfo timed out for {file_path}")
         return None
     except Exception as e:
-        logger.error(f"Error running mediainfo: {e}")
+        logger.error(f"SSH error running mediainfo: {e}")
         return None
 
 

@@ -11,6 +11,7 @@ services:
       - TZ=Asia/Shanghai
     volumes:
       - ./backend/data:/app/data
+      - ./backend/ssh_keys:/app/ssh_keys:ro
     networks:
       - anibt
     restart: unless-stopped

@@ -21,6 +21,13 @@ class QBTInstance(Base):
     download_path = Column(String(500), default="")
     tag = Column(String(100), default="")
     enabled = Column(Boolean, default=True)
+    # SSH config for remote mediainfo execution
+    ssh_host = Column(String(500), default="")
+    ssh_port = Column(Integer, default=22)
+    ssh_user = Column(String(100), default="root")
+    ssh_key_path = Column(String(500), default="")
+    # Path mapping: container path prefix → host path prefix (JSON: {"from": "/media", "to": "/hdd/media"})
+    path_mapping = Column(JSON, default=None)
     created_at = Column(DateTime, default=_now_shanghai)
     updated_at = Column(DateTime, default=_now_shanghai, onupdate=_now_shanghai)
 
