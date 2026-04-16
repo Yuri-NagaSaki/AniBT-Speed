@@ -42,24 +42,22 @@ async def get_status():
 
 @router.post("/trigger")
 async def trigger_sync():
-    """Mark records as synced — MediaInfo is pushed by standalone agents on qBT servers."""
+    """Trigger a MediaInfo scan: check all qBT instances for new completed torrents."""
+    from ..services.mediainfo_processor import check_mediainfo
+
+    try:
+        check_mediainfo()
+    except Exception as e:
+        logger.error(f"MediaInfo trigger failed: {e}")
+        return {"ok": False, "message": f"扫描失败: {str(e)}"}
+
     db = SessionLocal()
     try:
-        unsent = db.query(MediaInfoRecord).filter(
-            MediaInfoRecord.sent_to_citrus == False,
-            MediaInfoRecord.error_message.is_(None),
-        ).all()
-
-        if not unsent:
-            return {"ok": True, "message": "没有待处理的记录"}
-
-        # These records were already pushed by the standalone agent
-        for record in unsent:
-            record.sent_to_citrus = True
-            record.error_message = None
-
-        db.commit()
-        return {"ok": True, "message": f"已同步 {len(unsent)} 条记录"}
+        total = db.query(func.count(MediaInfoRecord.id)).scalar() or 0
+        sent = db.query(func.count(MediaInfoRecord.id)).filter(
+            MediaInfoRecord.sent_to_citrus == True
+        ).scalar() or 0
+        return {"ok": True, "message": f"扫描完成，共 {total} 条记录，已推送 {sent} 条"}
     finally:
         db.close()
 

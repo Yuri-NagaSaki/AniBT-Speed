@@ -79,7 +79,7 @@ export default function MediaInfo() {
           ) : (
             <Play size={16} />
           )}
-          {triggerMutation.isPending ? '同步中...' : '同步 Citrus 状态'}
+          {triggerMutation.isPending ? '同步中...' : '同步 AniBT 状态'}
         </button>
       </div>
 

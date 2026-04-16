@@ -9,6 +9,8 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - CORS_ORIGINS=${CORS_ORIGINS:-}
+      - CITRUS_API_URL=${CITRUS_API_URL:-}
+      - CITRUS_MEDIAINFO_TOKEN=${CITRUS_MEDIAINFO_TOKEN:-}
       - TZ=Asia/Shanghai
     volumes:
       - ./backend/data:/app/data

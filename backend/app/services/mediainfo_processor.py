@@ -148,6 +148,12 @@ def _process_torrent(
         logger.warning(f"Failed to parse mediainfo output for {video_path}")
         return
 
+    # Get HTML output for raw display
+    raw_html = _run_mediainfo_html_ssh(instance, video_path)
+    if raw_html:
+        raw_html = _sanitize_raw_html(raw_html, os.path.basename(video_path))
+        structured["rawText"] = raw_html
+
     record = existing or MediaInfoRecord(torrent_hash=torrent_hash)
     record.release_id = release_id
     record.instance_id = instance.id
@@ -165,13 +171,13 @@ def _process_torrent(
             record.sent_to_citrus = True
             record.error_message = None
             db.commit()
-            logger.info(f"MediaInfo pushed to Citrus for release {release_id}")
+            logger.info(f"MediaInfo pushed to AniBT for release {release_id}")
         else:
-            logger.warning(f"Failed to push MediaInfo to Citrus for release {release_id}")
+            logger.warning(f"Failed to push MediaInfo to AniBT for release {release_id}")
     elif not release_id:
         logger.info(f"No releaseId found for torrent {torrent_hash}, MediaInfo saved locally only")
     elif not settings.citrus_api_url:
-        logger.info("Citrus API URL not configured, skipping push")
+        logger.info("AniBT API URL not configured, skipping push")
 
 
 def _find_release_id(db: Session, torrent: dict) -> Optional[str]:
@@ -254,6 +260,38 @@ def _run_mediainfo_ssh(instance: QBTInstance, file_path: str) -> Optional[str]:
         return None
 
 
+def _run_mediainfo_html_ssh(instance: QBTInstance, file_path: str) -> Optional[str]:
+    """Run mediainfo --Output=HTML on a remote server via SSH."""
+    escaped_path = shlex.quote(file_path)
+    remote_cmd = f"mediainfo --Output=HTML {escaped_path}"
+    ssh_cmd = _build_ssh_cmd(instance, remote_cmd)
+
+    try:
+        result = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=120)
+        if result.returncode != 0:
+            logger.error(f"Remote mediainfo HTML failed for {file_path}: {result.stderr}")
+            return None
+        return result.stdout
+    except Exception as e:
+        logger.error(f"SSH error running mediainfo HTML: {e}")
+        return None
+
+
+def _sanitize_raw_html(raw_html: str, file_name: str) -> str:
+    """Strip wrapper tags and sanitize server paths from HTML mediainfo output."""
+    import re
+    # Replace full server path in "Complete name" cell with just the filename
+    raw_html = re.sub(
+        r'(<td class="Prefix">Complete name :</td>\s*<td>)[^<]*(</td>)',
+        rf'\g<1>{re.escape(file_name)}\g<2>',
+        raw_html,
+    )
+    # Strip <html><head>...<body> wrapper
+    raw_html = re.sub(r'^.*?<body>\s*', '', raw_html, flags=re.DOTALL)
+    raw_html = re.sub(r'\s*</body>\s*</html>\s*$', '', raw_html, flags=re.DOTALL)
+    return raw_html.strip()
+
+
 def _parse_mediainfo(raw_json: str, file_path: str) -> Optional[dict]:
     """Parse mediainfo JSON output into structured format for Citrus."""
     try:
@@ -331,7 +369,7 @@ def _parse_mediainfo(raw_json: str, file_path: str) -> Optional[dict]:
 
 
 def _push_to_citrus(release_id: str, info_hash: str, structured: dict) -> bool:
-    """Push MediaInfo data to Citrus API."""
+    """Push MediaInfo data to AniBT API."""
     url = f"{settings.citrus_api_url.rstrip('/')}/api/releases/mediainfo"
     headers = {
         "Authorization": f"Bearer {settings.citrus_mediainfo_token}",
