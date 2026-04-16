@@ -39,8 +39,13 @@ setup_env() {
 
 SECRET_KEY=${secret_key}
 ADMIN_PASSWORD=admin
+
+# CORS allowed origins (comma-separated). Leave empty for same-origin only.
+# Example: CORS_ORIGINS=http://localhost:6868,https://my-domain.com
+CORS_ORIGINS=
 EOF
         warn "已生成 .env，默认密码为 admin，请尽快修改！"
+        warn "  SECRET_KEY 已自动生成安全随机值"
         warn "  编辑 .env: nano $SCRIPT_DIR/.env"
     else
         info ".env 已存在，跳过生成"
