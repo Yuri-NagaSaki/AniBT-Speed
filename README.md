@@ -292,7 +292,7 @@ bash test.sh
 
 ## MediaInfo Agent（独立部署）
 
-在每台 qBittorrent 服务器上部署的独立代理，自动为已完成的种子生成 MediaInfo 并推送到 Citrus（AniBT）站点展示。
+在每台 qBittorrent 服务器上部署的独立代理，自动为已完成的种子生成 MediaInfo 并推送到 AniBT 站点展示。
 
 ### 工作流程
 
@@ -330,7 +330,7 @@ ssh root@your-qbt-server "vim /etc/mediainfo-agent/config.env"
 | `QBT_URL` | qBittorrent WebUI 地址 | `http://localhost:8080` |
 | `QBT_USERNAME` | qBT 用户名 | `admin` |
 | `QBT_PASSWORD` | qBT 密码 | `your-password` |
-| `CITRUS_API_URL` | Citrus 站点地址 | `https://site.anibt.net` |
+| `CITRUS_API_URL` |  站点地址 | `https://domain` |
 | `CITRUS_MEDIAINFO_TOKEN` | Citrus API 令牌 | `your-token` |
 | `PATH_MAPPING` | 路径映射（Docker qBT 用） | `/media:/hdd/media` |
 | `CHECK_INTERVAL` | 检查间隔（秒） | `300` |
