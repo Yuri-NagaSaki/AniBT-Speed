@@ -24,7 +24,7 @@ export default function MediaInfo() {
     staleTime: 15000,
   })
 
-  const { data: records, isLoading: recordsLoading } = useQuery({
+  const { data: records, isLoading: recordsLoading, isFetching: recordsFetching } = useQuery({
     queryKey: ['mediainfo-records', page],
     queryFn: () => mediaInfoApi.records({ limit, offset: page * limit }),
     staleTime: 15000,
@@ -154,15 +154,19 @@ export default function MediaInfo() {
               queryClient.invalidateQueries({ queryKey: ['mediainfo-records'] })
               queryClient.invalidateQueries({ queryKey: ['mediainfo-status'] })
             }}
+            disabled={recordsFetching}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '6px 12px', borderRadius: 8,
               background: 'var(--ctp-surface0)',
               color: 'var(--ctp-subtext0)',
-              border: 'none', cursor: 'pointer', fontSize: 13,
+              border: 'none', cursor: recordsFetching ? 'default' : 'pointer', fontSize: 13,
+              opacity: recordsFetching ? 0.6 : 1,
+              transition: 'opacity 0.2s',
             }}
           >
-            <RefreshCw size={14} /> 刷新
+            <RefreshCw size={14} style={recordsFetching ? { animation: 'spin 1s linear infinite' } : undefined} />
+            {recordsFetching ? '刷新中...' : '刷新'}
           </button>
         </div>
 
