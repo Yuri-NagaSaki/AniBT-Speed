@@ -25,6 +25,7 @@ export default function SettingsForm({ category, title, description, fields }: S
   const { data, isLoading } = useQuery({
     queryKey: ['settings', category],
     queryFn: () => settingsApi.get(category),
+    staleTime: 60000,
   })
 
   const [form, setForm] = useState<Record<string, any>>({})

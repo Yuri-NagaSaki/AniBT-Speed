@@ -7,12 +7,15 @@ import './index.css'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchInterval: 10000,
       retry: 2,
-      staleTime: 5000,
+      staleTime: 10000,
+      gcTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: true,
     },
   },
 })
+
+export { queryClient }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

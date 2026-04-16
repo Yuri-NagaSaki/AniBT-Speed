@@ -21,11 +21,13 @@ export default function MediaInfo() {
     queryKey: ['mediainfo-status'],
     queryFn: () => mediaInfoApi.status(),
     refetchInterval: 30000,
+    staleTime: 15000,
   })
 
   const { data: records, isLoading: recordsLoading } = useQuery({
     queryKey: ['mediainfo-records', page],
     queryFn: () => mediaInfoApi.records({ limit, offset: page * limit }),
+    staleTime: 15000,
   })
 
   const triggerMutation = useMutation({

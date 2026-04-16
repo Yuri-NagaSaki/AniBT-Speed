@@ -34,6 +34,7 @@ export default function Instances() {
     queryKey: ['instances'],
     queryFn: instancesApi.list,
     refetchInterval: 5000,
+    staleTime: 3000,
   })
 
   const createMutation = useMutation({

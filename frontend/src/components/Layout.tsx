@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useLocation, useNavigate } from '@tanstack/react-router'
+import { useLocation, useNavigate, useRouter } from '@tanstack/react-router'
 import { clearToken } from '../api/client'
 import {
   LayoutDashboard, Server, Rss, HardDrive,
@@ -21,6 +21,7 @@ const navItems = [
 export default function Layout({ children }: { children: ReactNode }) {
   const location = useLocation()
   const navigate = useNavigate()
+  const router = useRouter()
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--ctp-base)' }}>
@@ -73,6 +74,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                     e.currentTarget.style.background = 'var(--ctp-surface0)'
                     e.currentTarget.style.color = 'var(--ctp-subtext1)'
                   }
+                  router.preloadRoute({ to: item.path })
                 }}
                 onMouseLeave={(e) => {
                   if (!active) {

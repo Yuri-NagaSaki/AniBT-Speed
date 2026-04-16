@@ -20,6 +20,7 @@ export default function Logs() {
   const { data, isLoading } = useQuery({
     queryKey: ['logs', filter, page],
     queryFn: () => statsApi.logs({ limit, offset: page * limit, action: filter }),
+    staleTime: 10000,
   })
 
   const totalPages = data ? Math.ceil(data.total / limit) : 0

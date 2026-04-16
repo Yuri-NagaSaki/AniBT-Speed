@@ -26,8 +26,8 @@ export default function RSSManager() {
   })
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
 
-  const { data: feeds = [], isLoading } = useQuery({ queryKey: ['rss'], queryFn: rssApi.list })
-  const { data: instances = [] } = useQuery({ queryKey: ['instances'], queryFn: instancesApi.list })
+  const { data: feeds = [], isLoading } = useQuery({ queryKey: ['rss'], queryFn: rssApi.list, staleTime: 30000 })
+  const { data: instances = [] } = useQuery({ queryKey: ['instances'], queryFn: instancesApi.list, staleTime: 5000 })
 
   const createMutation = useMutation({
     mutationFn: rssApi.create,

@@ -28,7 +28,7 @@ const tgInputStyle: React.CSSProperties = {
 
 export default function Telegram() {
   const queryClient = useQueryClient()
-  const { data, isLoading } = useQuery({ queryKey: ['telegram'], queryFn: telegramApi.get })
+  const { data, isLoading } = useQuery({ queryKey: ['telegram'], queryFn: telegramApi.get, staleTime: 60000 })
   const [form, setForm] = useState<any>({})
   const [saved, setSaved] = useState(false)
   const [testResult, setTestResult] = useState<any>(null)
