@@ -8,6 +8,10 @@ class Settings(BaseSettings):
     admin_password: str = "admin"
     database_url: str = "sqlite:///./data/anibt_speed.db"
 
+    # Citrus MediaInfo API
+    citrus_api_url: str = ""
+    citrus_mediainfo_token: str = ""
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

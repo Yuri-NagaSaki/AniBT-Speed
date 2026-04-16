@@ -80,3 +80,18 @@ class RSSProcessedItem(Base):
     link = Column(String(2000), default="")
     instance_id = Column(Integer, nullable=True)
     added_at = Column(DateTime, default=_now_shanghai)
+
+
+class MediaInfoRecord(Base):
+    __tablename__ = "mediainfo_records"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    torrent_hash = Column(String, nullable=False, index=True, unique=True)
+    release_id = Column(String, nullable=True)
+    instance_id = Column(Integer, nullable=True)
+    file_path = Column(String, nullable=True)
+    mediainfo_json = Column(Text, nullable=True)
+    sent_to_citrus = Column(Boolean, default=False, nullable=False)
+    error_message = Column(String, nullable=True)
+    created_at = Column(DateTime, default=_now_shanghai, nullable=False)
+    updated_at = Column(DateTime, default=_now_shanghai, onupdate=_now_shanghai, nullable=True)

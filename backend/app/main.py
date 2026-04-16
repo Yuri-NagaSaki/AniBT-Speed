@@ -5,7 +5,7 @@ import jwt as pyjwt
 
 from app.config import settings as app_settings
 from app.database import init_db
-from app.api import auth, instances, rss, settings, stats, telegram
+from app.api import auth, instances, rss, settings, stats, telegram, mediainfo
 
 app = FastAPI(
     title="AniBT-Speed API",
@@ -52,6 +52,7 @@ app.include_router(rss.router, prefix="/api/rss", tags=["RSS"])
 app.include_router(settings.router, prefix="/api/settings", tags=["Settings"])
 app.include_router(stats.router, prefix="/api/stats", tags=["Stats"])
 app.include_router(telegram.router, prefix="/api/telegram", tags=["Telegram"])
+app.include_router(mediainfo.router, prefix="/api/mediainfo", tags=["MediaInfo"])
 
 
 @app.on_event("startup")
