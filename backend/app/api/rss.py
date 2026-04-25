@@ -17,6 +17,7 @@ class RSSCreate(BaseModel):
     include_filter: str = ""
     exclude_filter: str = ""
     refresh_interval: int = 5
+    max_items_per_check: int = 5
     enabled: bool = True
 
 
@@ -27,6 +28,7 @@ class RSSUpdate(BaseModel):
     include_filter: Optional[str] = None
     exclude_filter: Optional[str] = None
     refresh_interval: Optional[int] = None
+    max_items_per_check: Optional[int] = None
     enabled: Optional[bool] = None
 
 
@@ -42,6 +44,7 @@ def list_feeds(db: Session = Depends(get_db)):
             "include_filter": f.include_filter,
             "exclude_filter": f.exclude_filter,
             "refresh_interval": f.refresh_interval,
+            "max_items_per_check": f.max_items_per_check,
             "enabled": f.enabled,
         }
         for f in feeds

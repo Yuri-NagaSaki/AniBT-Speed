@@ -307,6 +307,31 @@ a:focus-visible {
   padding: clamp(22px, 3vw, 32px);
 }
 
+.form-panel {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklch, var(--bg-panel) 92%, transparent);
+  padding: clamp(22px, 3vw, 32px);
+}
+
+.form-grid-wide {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.entity-list {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: color-mix(in oklch, var(--bg-panel) 90%, transparent);
+}
+
+.entity-row {
+  padding: 18px 22px;
+  transition: background .16s var(--ease-out);
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -450,11 +475,18 @@ a:focus-visible {
 
 .setting-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(260px, .85fr) minmax(260px, 420px);
   gap: 28px;
   align-items: center;
   padding: 24px 0;
   border-bottom: 1px solid var(--line-soft);
+}
+
+.setting-control {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .setting-row:last-child {

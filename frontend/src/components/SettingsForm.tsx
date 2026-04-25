@@ -76,7 +76,7 @@ export default function SettingsForm({ category, title, description, fields }: S
               <div className="field-label" style={{ color: 'var(--text-primary)' }}>{field.label}</div>
               {field.help && <div className="field-help" style={{ marginTop: 7 }}>{field.help}</div>}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifySelf: 'end' }}>
+            <div className="setting-control">
               {field.type === 'toggle' ? (
                 <Toggle checked={!!form[field.key]} onCheckedChange={(checked) => setForm({ ...form, [field.key]: checked })} label={field.label} />
               ) : field.type === 'number' ? (
@@ -87,7 +87,7 @@ export default function SettingsForm({ category, title, description, fields }: S
                     onChange={(e) => setForm({ ...form, [field.key]: Number(e.target.value) })}
                     min={field.min} max={field.max}
                     className="mono"
-                    style={{ width: 112, textAlign: 'right' }}
+                    style={{ textAlign: 'right' }}
                   />
                   {field.unit && <span style={{ fontSize: 13, color: 'var(--text-muted)', minWidth: 28 }}>{field.unit}</span>}
                 </>
@@ -97,14 +97,12 @@ export default function SettingsForm({ category, title, description, fields }: S
                   value={formatTags(form[field.key])}
                   onChange={(e) => setForm({ ...form, [field.key]: parseTags(e.target.value) })}
                   placeholder="Dynamis One, Example"
-                  style={{ width: 320 }}
                 />
               ) : (
                 <Input
                   type="text"
                   value={formatInputValue(form[field.key])}
                   onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
-                  style={{ width: 280 }}
                 />
               )}
             </div>

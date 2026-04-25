@@ -52,7 +52,12 @@ def _poll_single_feed(db: Session, feed: RSSFeed):
         logger.warning(f"Failed to parse RSS feed '{feed.name}': {parsed.bozo_exception}")
         return
 
-    for entry in parsed.entries:
+    entries = parsed.entries
+    max_items = feed.max_items_per_check if feed.max_items_per_check is not None else 5
+    if max_items > 0:
+        entries = entries[:max_items]
+
+    for entry in entries:
         guid = entry.get("id") or entry.get("link") or entry.get("title", "")
         if not guid:
             continue

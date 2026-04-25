@@ -23,7 +23,7 @@ export default function RSSManager() {
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState({
     name: '', url: '', instance_id: 0,
-    include_filter: '', exclude_filter: '', refresh_interval: 5, enabled: true,
+    include_filter: '', exclude_filter: '', refresh_interval: 5, max_items_per_check: 5, enabled: true,
   })
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
 
@@ -46,7 +46,7 @@ export default function RSSManager() {
   })
 
   function resetForm() {
-    setForm({ name: '', url: '', instance_id: instances[0]?.id || 0, include_filter: '', exclude_filter: '', refresh_interval: 5, enabled: true })
+    setForm({ name: '', url: '', instance_id: instances[0]?.id || 0, include_filter: '', exclude_filter: '', refresh_interval: 5, max_items_per_check: 5, enabled: true })
     setShowForm(false)
     setEditId(null)
   }
@@ -56,6 +56,7 @@ export default function RSSManager() {
       name: feed.name, url: feed.url, instance_id: feed.instance_id,
       include_filter: feed.include_filter || '',
       exclude_filter: feed.exclude_filter || '', refresh_interval: feed.refresh_interval || 5,
+      max_items_per_check: feed.max_items_per_check ?? 5,
       enabled: feed.enabled,
     })
     setEditId(feed.id)
@@ -88,14 +89,7 @@ export default function RSSManager() {
 
       {/* Add/Edit Form — slide-down panel */}
       {showForm && (
-        <div style={{
-          marginBottom: 32,
-          background: 'var(--ctp-surface0)',
-          border: '1px solid var(--ctp-surface1)',
-          borderRadius: 14,
-          padding: 32,
-          animation: 'slideUp 0.2s ease-out',
-        }}>
+        <div className="form-panel" style={{ marginBottom: 32, animation: 'slideUp 0.2s ease-out' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
             <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--ctp-text)' }}>
               {editId ? '编辑 RSS 源' : '添加 RSS 源'}
@@ -111,7 +105,7 @@ export default function RSSManager() {
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+            <div className="form-grid-wide" style={{ marginBottom: 20 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ctp-subtext0)', marginBottom: 10 }}>名称</label>
                 <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Anibt"
@@ -147,6 +141,21 @@ export default function RSSManager() {
                   style={inputStyle}
                   onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-mauve)' }}
                   onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ctp-subtext0)', marginBottom: 10 }}>每轮检查最新</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={form.max_items_per_check}
+                  onChange={(e) => setForm({ ...form, max_items_per_check: Number(e.target.value) })}
+                  placeholder="5"
+                  style={inputStyle}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-mauve)' }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }}
+                />
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>默认 5，0 表示不限制；防止首次部署一次性添加大量历史种子。</p>
               </div>
             </div>
 
@@ -214,15 +223,10 @@ export default function RSSManager() {
           <p style={{ fontSize: 12, color: 'var(--ctp-overlay0)', marginTop: 8 }}>点击「添加 RSS 源」开始自动订阅</p>
         </div>
       ) : (
-        <div style={{
-          background: 'var(--ctp-surface0)', border: '1px solid var(--ctp-surface1)',
-          borderRadius: 14, overflow: 'hidden',
-        }}>
+        <div className="entity-list">
           {feeds.map((feed: any, idx: number) => (
-            <div key={feed.id} style={{
-              padding: '20px 24px',
-              borderBottom: idx < feeds.length - 1 ? '1px solid var(--ctp-surface1)' : 'none',
-              transition: 'background 0.15s ease',
+            <div key={feed.id} className="entity-row" style={{
+              borderBottom: idx < feeds.length - 1 ? '1px solid var(--line-soft)' : 'none',
             }}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(69,71,90,0.3)' }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}>
@@ -259,6 +263,7 @@ export default function RSSManager() {
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                   <Clock size={11} /> {feed.refresh_interval || 5} min
                 </span>
+                <span>{(feed.max_items_per_check ?? 5) > 0 ? `最新 ${feed.max_items_per_check ?? 5} 条` : '不限制条数'}</span>
                 {feed.include_filter && (
                   <span style={{ color: 'var(--ctp-green)' }}>+ {feed.include_filter}</span>
                 )}

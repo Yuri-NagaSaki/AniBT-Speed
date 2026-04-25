@@ -42,6 +42,7 @@ class RSSFeed(Base):
     include_filter = Column(String(1000), default="")
     exclude_filter = Column(String(1000), default="")
     refresh_interval = Column(Integer, default=5)  # minutes
+    max_items_per_check = Column(Integer, default=5)  # 0 = unlimited
     enabled = Column(Boolean, default=True)
     created_at = Column(DateTime, default=_now_shanghai)
 

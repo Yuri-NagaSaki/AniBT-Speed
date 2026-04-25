@@ -277,18 +277,11 @@ export default function Instances() {
           <p style={{ fontSize: 12, color: 'var(--ctp-overlay0)', marginTop: 8 }}>点击「添加实例」开始管理 qBittorrent</p>
         </div>
       ) : (
-        <div style={{
-          background: 'var(--ctp-surface0)',
-          border: '1px solid var(--ctp-surface1)',
-          borderRadius: 14,
-          overflow: 'hidden',
-        }}>
+        <div className="entity-list">
           {instances.map((inst: any, idx: number) => (
-            <div key={inst.id} style={{
+            <div key={inst.id} className="entity-row" style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '20px 24px',
-              borderBottom: idx < instances.length - 1 ? '1px solid var(--ctp-surface1)' : 'none',
-              transition: 'background 0.15s ease',
+              borderBottom: idx < instances.length - 1 ? '1px solid var(--line-soft)' : 'none',
             }}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(69,71,90,0.3)' }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}>

@@ -27,6 +27,7 @@ export interface RSSFeed {
   include_filter: string
   exclude_filter: string
   refresh_interval: number
+  max_items_per_check: number
   enabled: boolean
 }
 
