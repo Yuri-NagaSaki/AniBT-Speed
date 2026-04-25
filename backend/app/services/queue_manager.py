@@ -124,12 +124,8 @@ def _manage_queue(db: Session, instance: QBTInstance, config: dict):
                     torrent_name=t.name,
                     details="No leechers",
                 ))
-                send_notification(
-                    f"⏸ <b>队列暂停</b>\n"
-                    f"实例: {instance.name}\n"
-                    f"种子: {t.name}\n"
-                    f"原因: 无下载者"
-                )
+                # Routine no-leecher pauses can happen in batches; keep them in logs
+                # instead of sending many Telegram messages.
 
             elif is_paused and t.num_leechs > config["resume_when_leechers_gt"]:
                 client.resume_torrent(t.hash)
