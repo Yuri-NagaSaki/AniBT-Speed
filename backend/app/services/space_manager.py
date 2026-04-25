@@ -18,7 +18,7 @@ DEFAULT_SPACE_CONFIG = {
     "boundary_hours": 12,
     "max_torrent_size_gb": 0,  # 0 = no limit
     "max_deletions_per_run": 20,
-    "check_path": "/root/AniBt",
+    "check_path": "/app/data",
     "check_interval_minutes": 5,
 }
 
