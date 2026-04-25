@@ -14,6 +14,9 @@ interface FieldDef {
   max?: number
 }
 
+type SettingsValue = string | number | boolean | string[] | null | undefined
+type SettingsState = Record<string, SettingsValue>
+
 interface SettingsFormProps {
   category: string
   title: string
@@ -29,13 +32,13 @@ export default function SettingsForm({ category, title, description, fields }: S
     staleTime: 60000,
   })
 
-  const [form, setForm] = useState<Record<string, any>>({})
+  const [form, setForm] = useState<SettingsState>({})
   const [saved, setSaved] = useState(false)
 
   useEffect(() => { if (data) setForm(data) }, [data])
 
   const mutation = useMutation({
-    mutationFn: (config: any) => settingsApi.update(category, config),
+    mutationFn: (config: SettingsState) => settingsApi.update(category, config),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings', category] })
       setSaved(true)
@@ -80,7 +83,7 @@ export default function SettingsForm({ category, title, description, fields }: S
                 <>
                   <Input
                     type="number"
-                    value={form[field.key] ?? ''}
+                    value={formatInputValue(form[field.key])}
                     onChange={(e) => setForm({ ...form, [field.key]: Number(e.target.value) })}
                     min={field.min} max={field.max}
                     className="mono"
@@ -88,10 +91,18 @@ export default function SettingsForm({ category, title, description, fields }: S
                   />
                   {field.unit && <span style={{ fontSize: 13, color: 'var(--text-muted)', minWidth: 28 }}>{field.unit}</span>}
                 </>
+              ) : field.type === 'tags' ? (
+                <Input
+                  type="text"
+                  value={formatTags(form[field.key])}
+                  onChange={(e) => setForm({ ...form, [field.key]: parseTags(e.target.value) })}
+                  placeholder="Dynamis One, Example"
+                  style={{ width: 320 }}
+                />
               ) : (
                 <Input
                   type="text"
-                  value={form[field.key] ?? ''}
+                  value={formatInputValue(form[field.key])}
                   onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
                   style={{ width: 280 }}
                 />
@@ -118,4 +129,22 @@ export default function SettingsForm({ category, title, description, fields }: S
       </div>
     </div>
   )
+}
+
+function formatTags(value: SettingsValue): string {
+  if (Array.isArray(value)) return value.join(', ')
+  if (typeof value === 'string') return value
+  return ''
+}
+
+function formatInputValue(value: SettingsValue): string | number {
+  if (typeof value === 'number' || typeof value === 'string') return value
+  return ''
+}
+
+function parseTags(value: string): string[] {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
 }

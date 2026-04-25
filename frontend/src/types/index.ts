@@ -46,6 +46,10 @@ export interface QueueConfig {
   resume_when_leechers_gt: number
   min_seed_time_hours: number
   exclude_tags: string[]
+  keyword_cleanup_enabled: boolean
+  keyword_cleanup_hours: number
+  keyword_cleanup_keywords: string[]
+  keyword_cleanup_max_per_run: number
 }
 
 export interface RateLimitConfig {

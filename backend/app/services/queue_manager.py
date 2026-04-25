@@ -15,6 +15,10 @@ DEFAULT_QUEUE_CONFIG = {
     "resume_when_leechers_gt": 0,
     "min_seed_time_hours": 1,
     "exclude_tags": [],
+    "keyword_cleanup_enabled": False,
+    "keyword_cleanup_hours": 24,
+    "keyword_cleanup_keywords": [],
+    "keyword_cleanup_max_per_run": 20,
 }
 
 
@@ -51,12 +55,46 @@ def _manage_queue(db: Session, instance: QBTInstance, config: dict):
         torrents = client.client.torrents.info()
         now = time.time()
         min_seed = config["min_seed_time_hours"] * 3600
-        exclude = set(config.get("exclude_tags", []))
+        exclude = {tag.strip() for tag in config.get("exclude_tags", []) if tag.strip()}
+        cleanup_keywords = _normalize_keywords(config.get("keyword_cleanup_keywords", []))
+        cleanup_after = config.get("keyword_cleanup_hours", 24) * 3600
+        cleanup_enabled = config.get("keyword_cleanup_enabled", False) and cleanup_keywords
+        cleanup_limit = config.get("keyword_cleanup_max_per_run", 20)
+        cleanup_count = 0
 
         for t in torrents:
-            tags = set(t.tags.split(",")) if t.tags else set()
+            tags = {tag.strip() for tag in t.tags.split(",") if tag.strip()} if t.tags else set()
             if tags & exclude:
                 continue
+
+            if cleanup_enabled and cleanup_count < cleanup_limit:
+                matched_keyword = _match_keyword(t.name, cleanup_keywords)
+                if matched_keyword:
+                    seed_age = _seed_age_seconds(t, now)
+                    if seed_age >= cleanup_after:
+                        client.delete_torrent(t.hash)
+                        logger.info(
+                            f"Deleted by keyword cleanup: {t.name} "
+                            f"(keyword: {matched_keyword}, seed age: {seed_age / 3600:.1f}h)"
+                        )
+                        db.add(ActionLog(
+                            action="delete",
+                            instance_id=instance.id,
+                            torrent_name=t.name,
+                            details=(
+                                f"Keyword cleanup: keyword={matched_keyword}, "
+                                f"seed_age={seed_age / 3600:.1f}h"
+                            ),
+                        ))
+                        send_notification(
+                            f"🗑 <b>关键词清理</b>\n"
+                            f"实例: {instance.name}\n"
+                            f"关键词: {matched_keyword}\n"
+                            f"删除: {t.name}\n"
+                            f"做种时长: {seed_age / 3600:.1f}h"
+                        )
+                        cleanup_count += 1
+                        continue
 
             age = now - t.added_on
             if age < min_seed:
@@ -100,3 +138,30 @@ def _manage_queue(db: Session, instance: QBTInstance, config: dict):
         db.commit()
     except Exception as e:
         logger.error(f"Queue management error for {instance.name}: {e}")
+
+
+def _normalize_keywords(value) -> list[str]:
+    if isinstance(value, str):
+        raw = value.split(",")
+    elif isinstance(value, list):
+        raw = value
+    else:
+        raw = []
+    return [str(keyword).strip() for keyword in raw if str(keyword).strip()]
+
+
+def _match_keyword(name: str, keywords: list[str]) -> str | None:
+    lowered_name = name.lower()
+    for keyword in keywords:
+        if keyword.lower() in lowered_name:
+            return keyword
+    return None
+
+
+def _seed_age_seconds(torrent, now: float) -> float:
+    if getattr(torrent, "progress", 0) < 1:
+        return -1
+    completion_on = getattr(torrent, "completion_on", 0) or 0
+    if completion_on > 0:
+        return now - completion_on
+    return now - torrent.added_on

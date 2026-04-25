@@ -7,13 +7,13 @@ import {
 } from 'lucide-react'
 
 const navItems = [
-  { path: '/', label: '仪表盘', icon: LayoutDashboard },
-  { path: '/instances', label: '实例管理', icon: Server },
+  { path: '/', label: '概览', icon: LayoutDashboard },
+  { path: '/instances', label: '实例', icon: Server },
   { path: '/rss', label: 'RSS 管理', icon: Rss },
-  { path: '/space-policy', label: '空间策略', icon: HardDrive },
-  { path: '/queue-policy', label: '队列策略', icon: ListOrdered },
-  { path: '/rate-limit', label: '限速策略', icon: Gauge },
-  { path: '/telegram', label: 'Telegram', icon: MessageSquare },
+  { path: '/space-policy', label: '空间', icon: HardDrive },
+  { path: '/queue-policy', label: '队列', icon: ListOrdered },
+  { path: '/rate-limit', label: '限速', icon: Gauge },
+  { path: '/telegram', label: '通知', icon: MessageSquare },
   { path: '/logs', label: '日志', icon: ScrollText },
 ]
 
@@ -26,9 +26,8 @@ export default function Layout({ children }: { children: ReactNode }) {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand-block">
-          <div className="brand-mark">A</div>
           <div className="brand-title">AniBT-Speed</div>
-          <div className="brand-subtitle">SWARM CONTROL</div>
+          <div className="brand-subtitle">单容器种群控制台</div>
         </div>
 
         <nav className="nav-list" aria-label="主导航">
