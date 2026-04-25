@@ -47,6 +47,10 @@ export interface QueueConfig {
   resume_when_leechers_gt: number
   min_seed_time_hours: number
   exclude_tags: string[]
+  probe_stopped_enabled: boolean
+  probe_interval_minutes: number
+  probe_batch_size: number
+  probe_duration_minutes: number
   keyword_cleanup_enabled: boolean
   keyword_cleanup_hours: number
   keyword_cleanup_keywords: string[]

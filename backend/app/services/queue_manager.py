@@ -11,15 +11,23 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_QUEUE_CONFIG = {
     "enabled": True,
-    "pause_when_no_leechers": False,
+    "pause_when_no_leechers": True,
     "resume_when_leechers_gt": 0,
-    "min_seed_time_hours": 1,
+    "min_seed_time_hours": 12,
     "exclude_tags": [],
+    "probe_stopped_enabled": True,
+    "probe_interval_minutes": 15,
+    "probe_batch_size": 20,
+    "probe_duration_minutes": 6,
     "keyword_cleanup_enabled": False,
     "keyword_cleanup_hours": 24,
     "keyword_cleanup_keywords": [],
     "keyword_cleanup_max_per_run": 20,
 }
+
+_probe_started_at: dict[str, float] = {}
+_last_probe_batch_at = 0.0
+_probe_cursor = 0
 
 
 def get_queue_config(db: Session) -> dict:
@@ -61,6 +69,7 @@ def _manage_queue(db: Session, instance: QBTInstance, config: dict):
         cleanup_enabled = config.get("keyword_cleanup_enabled", False) and cleanup_keywords
         cleanup_limit = config.get("keyword_cleanup_max_per_run", 20)
         cleanup_count = 0
+        probing_hashes = _manage_probe_windows(client, torrents, config, now, min_seed, exclude)
 
         for t in torrents:
             tags = {tag.strip() for tag in t.tags.split(",") if tag.strip()} if t.tags else set()
@@ -103,6 +112,9 @@ def _manage_queue(db: Session, instance: QBTInstance, config: dict):
             is_seeding = t.state in SEEDING_STATES
             is_paused = t.state in PAUSED_SEEDING_STATES
 
+            if t.hash in probing_hashes:
+                continue
+
             if is_seeding and config["pause_when_no_leechers"] and t.num_leechs == 0:
                 client.pause_torrent(t.hash)
                 logger.info(f"Paused (no leechers): {t.name}")
@@ -138,6 +150,76 @@ def _manage_queue(db: Session, instance: QBTInstance, config: dict):
         db.commit()
     except Exception as e:
         logger.error(f"Queue management error for {instance.name}: {e}")
+
+
+def _manage_probe_windows(client, torrents: list, config: dict, now: float, min_seed: float, exclude: set[str]) -> set[str]:
+    """Rotate stopped seed torrents through short active windows to catch brief demand."""
+    global _last_probe_batch_at, _probe_cursor
+
+    torrent_by_hash = {t.hash: t for t in torrents}
+    for torrent_hash in list(_probe_started_at):
+        if torrent_hash not in torrent_by_hash:
+            _probe_started_at.pop(torrent_hash, None)
+
+    if not config.get("pause_when_no_leechers", True) or not config.get("probe_stopped_enabled", True):
+        return set()
+
+    threshold = config.get("resume_when_leechers_gt", 0)
+    duration = max(int(config.get("probe_duration_minutes", 6)), 1) * 60
+    interval = max(int(config.get("probe_interval_minutes", 15)), 1) * 60
+    batch_size = max(int(config.get("probe_batch_size", 20)), 0)
+
+    for torrent_hash, started_at in list(_probe_started_at.items()):
+        if now - started_at < duration:
+            continue
+
+        torrent = torrent_by_hash.get(torrent_hash)
+        _probe_started_at.pop(torrent_hash, None)
+        if not torrent:
+            continue
+
+        has_demand = torrent.num_leechs > threshold or torrent.upspeed > 0
+        if has_demand:
+            logger.info(f"Kept probe active (leechers={torrent.num_leechs}): {torrent.name}")
+        elif torrent.state in SEEDING_STATES:
+            client.pause_torrent(torrent.hash)
+            logger.info(f"Paused probe (no leechers): {torrent.name}")
+
+    if batch_size <= 0 or now - _last_probe_batch_at < interval:
+        return set(_probe_started_at)
+
+    available_slots = batch_size - len(_probe_started_at)
+    if available_slots <= 0:
+        return set(_probe_started_at)
+
+    candidates = []
+    for torrent in torrents:
+        if torrent.hash in _probe_started_at:
+            continue
+        if torrent.state not in PAUSED_SEEDING_STATES or getattr(torrent, "progress", 0) < 1:
+            continue
+        if now - torrent.added_on < min_seed:
+            continue
+        tags = {tag.strip() for tag in torrent.tags.split(",") if tag.strip()} if torrent.tags else set()
+        if tags & exclude:
+            continue
+        candidates.append(torrent)
+
+    if not candidates:
+        return set(_probe_started_at)
+
+    start = _probe_cursor % len(candidates)
+    ordered = candidates[start:] + candidates[:start]
+    selected = ordered[:available_slots]
+    _probe_cursor = (start + len(selected)) % len(candidates)
+    _last_probe_batch_at = now
+
+    for torrent in selected:
+        client.resume_torrent(torrent.hash)
+        _probe_started_at[torrent.hash] = now
+        logger.info(f"Started seed probe: {torrent.name}")
+
+    return set(_probe_started_at)
 
 
 def _normalize_keywords(value) -> list[str]:
