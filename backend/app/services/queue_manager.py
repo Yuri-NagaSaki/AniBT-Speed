@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
 from app.models import QBTInstance, PolicySettings, ActionLog
-from app.services.qbt_client import get_qbt_client
+from app.services.qbt_client import PAUSED_SEEDING_STATES, SEEDING_STATES, get_qbt_client
 from app.services.telegram_notifier import send_notification
 
 logger = logging.getLogger(__name__)
@@ -100,8 +100,8 @@ def _manage_queue(db: Session, instance: QBTInstance, config: dict):
             if age < min_seed:
                 continue
 
-            is_seeding = t.state in ("uploading", "stalledUP")
-            is_paused = t.state in ("pausedUP",)
+            is_seeding = t.state in SEEDING_STATES
+            is_paused = t.state in PAUSED_SEEDING_STATES
 
             if is_seeding and config["pause_when_no_leechers"] and t.num_leechs == 0:
                 client.pause_torrent(t.hash)

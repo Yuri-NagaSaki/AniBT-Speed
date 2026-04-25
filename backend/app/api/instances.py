@@ -5,7 +5,12 @@ from typing import Optional
 
 from app.database import get_db
 from app.models import QBTInstance
-from app.services.qbt_client import get_qbt_client, remove_qbt_client
+from app.services.qbt_client import (
+    ACTIVE_TORRENT_STATES,
+    PAUSED_TORRENT_STATES,
+    get_qbt_client,
+    remove_qbt_client,
+)
 
 router = APIRouter()
 
@@ -66,8 +71,8 @@ def list_instances(db: Session = Depends(get_db)):
                 c = client.client  # single connection for both calls
                 info = c.transfer_info()
                 torrents = c.torrents.info()
-                active = sum(1 for t in torrents if t.state in ("uploading", "downloading", "stalledUP", "stalledDL"))
-                paused = sum(1 for t in torrents if t.state in ("pausedUP", "pausedDL"))
+                active = sum(1 for t in torrents if t.state in ACTIVE_TORRENT_STATES)
+                paused = sum(1 for t in torrents if t.state in PAUSED_TORRENT_STATES)
                 data["status"] = {
                     "connected": True,
                     "dl_speed": info.get("dl_info_speed", 0),

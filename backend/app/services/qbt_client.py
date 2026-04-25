@@ -7,6 +7,10 @@ logger = logging.getLogger(__name__)
 
 # Session stays valid for 5 minutes before forcing a re-login
 _SESSION_TTL = 300
+ACTIVE_TORRENT_STATES = {"uploading", "downloading", "stalledUP", "stalledDL", "forcedUP", "forcedDL"}
+SEEDING_STATES = {"uploading", "stalledUP", "forcedUP"}
+PAUSED_TORRENT_STATES = {"pausedUP", "pausedDL", "stoppedUP", "stoppedDL"}
+PAUSED_SEEDING_STATES = {"pausedUP", "stoppedUP"}
 
 
 class QBTClient:
@@ -73,8 +77,8 @@ class QBTClient:
 
     def get_torrent_count(self) -> dict:
         torrents = self.client.torrents.info()
-        active = sum(1 for t in torrents if t.state in ("uploading", "downloading", "stalledUP", "stalledDL"))
-        paused = sum(1 for t in torrents if t.state in ("pausedUP", "pausedDL"))
+        active = sum(1 for t in torrents if t.state in ACTIVE_TORRENT_STATES)
+        paused = sum(1 for t in torrents if t.state in PAUSED_TORRENT_STATES)
         return {"total": len(torrents), "active": active, "paused": paused}
 
     def get_storage_status(self, save_path: str = "") -> dict:
