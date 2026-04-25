@@ -135,10 +135,18 @@ class QBTClient:
     def add_tags_to_torrents(self, torrent_hashes: str, tags: str):
         self.client.torrents_add_tags(tags=tags, torrent_hashes=torrent_hashes)
 
+    def ensure_category(self, category: str, save_path: str = ""):
+        categories = self.client.torrents_categories() or {}
+        if category not in categories:
+            self.client.torrents_create_category(name=category, save_path=save_path or None)
+
+    def set_torrent_category(self, torrent_hashes: str, category: str):
+        self.client.torrents_set_category(category=category, torrent_hashes=torrent_hashes)
+
     def add_torrent_url(self, url: str, save_path: str = "", tags: str = "", category: str = "") -> bool:
         """Add a torrent by URL or magnet link. Returns True on success."""
         before_hashes: set[str] = set()
-        if tags:
+        if tags or category:
             before_hashes = {t.hash for t in self.client.torrents.info()}
 
         kwargs: dict = {"urls": url}
@@ -151,10 +159,13 @@ class QBTClient:
         result = self.client.torrents_add(**kwargs)
         ok = result == "Ok."
 
-        if ok and tags:
+        if ok and (tags or category):
             after_hashes = {t.hash for t in self.client.torrents.info()}
             for torrent_hash in after_hashes - before_hashes:
-                self.add_tags_to_torrents(torrent_hash, tags)
+                if tags:
+                    self.add_tags_to_torrents(torrent_hash, tags)
+                if category:
+                    self.set_torrent_category(torrent_hash, category)
 
         return ok
 

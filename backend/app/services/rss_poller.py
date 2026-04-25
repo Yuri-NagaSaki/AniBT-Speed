@@ -102,8 +102,9 @@ def _poll_single_feed(db: Session, feed: RSSFeed):
                     client.create_tags([tag])
                 except Exception:
                     pass
+                client.ensure_category(tag, save_path)
 
-            client.add_torrent_url(url=link, save_path=save_path, tags=tag)
+            client.add_torrent_url(url=link, save_path=save_path, tags=tag, category=tag)
 
             # Record as processed
             db.add(RSSProcessedItem(

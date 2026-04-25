@@ -35,13 +35,17 @@ def _apply_tags_for_instance(instance: QBTInstance):
             client.create_tags([tag])
         except Exception:
             pass
+        client.ensure_category(tag, instance.download_path or "")
 
         torrents = client.client.torrents.info()
         for t in torrents:
-            existing_tags = {tag.strip() for tag in t.tags.split(",") if tag.strip()} if t.tags else set()
+            existing_tags = {item.strip() for item in t.tags.split(",") if item.strip()} if t.tags else set()
             if tag not in existing_tags:
                 client.add_tags_to_torrents(t.hash, tag)
                 logger.info(f"Tagged '{t.name}' with '{tag}' on {instance.name}")
+            if t.category != tag:
+                client.set_torrent_category(t.hash, tag)
+                logger.info(f"Categorized '{t.name}' as '{tag}' on {instance.name}")
 
     except Exception as e:
         logger.error(f"Tag management error for {instance.name}: {e}")
