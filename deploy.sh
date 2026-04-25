@@ -61,15 +61,29 @@ build_and_start() {
         if ! docker compose pull app 2>&1; then
             warn "预构建镜像不可用，改为本地构建..."
             docker compose up -d --build --remove-orphans 2>&1
-            info "等待服务启动..."
-            sleep 5
+            wait_for_services
             return
         fi
         docker compose up -d --remove-orphans 2>&1
     fi
 
+    wait_for_services
+}
+
+wait_for_services() {
     info "等待服务启动..."
-    sleep 5
+    local app_ready=false
+    for _ in $(seq 1 60); do
+        if curl -sf http://127.0.0.1:6868/api/health >/dev/null 2>&1; then
+            app_ready=true
+            break
+        fi
+        sleep 1
+    done
+
+    if [ "$app_ready" != true ]; then
+        warn "应用容器在 60 秒内未通过健康检查，将继续执行详细验证"
+    fi
 }
 
 verify_services() {
