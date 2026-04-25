@@ -1,0 +1,14 @@
+.git
+.github
+.env
+*.log
+
+backend/data/
+backend/ssh_keys/
+backend/**/__pycache__/
+backend/**/*.pyc
+
+frontend/dist/
+frontend/node_modules/
+
+peerbanhelper/

@@ -1,10 +1,10 @@
 services:
-  backend:
-    image: ghcr.io/yuri-nagasaki/anibt-speed-backend:latest
+  app:
+    image: ghcr.io/yuri-nagasaki/anibt-speed:latest
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
-    container_name: anibt-speed-backend
+    container_name: anibt-speed
     environment:
       - SECRET_KEY=${SECRET_KEY}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
@@ -15,24 +15,8 @@ services:
     volumes:
       - ./backend/data:/app/data
       - ./backend/ssh_keys:/app/ssh_keys:ro
-    networks:
-      - anibt
-    restart: unless-stopped
-
-  frontend:
-    image: ghcr.io/yuri-nagasaki/anibt-speed-frontend:latest
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: anibt-speed-frontend
-    environment:
-      - TZ=Asia/Shanghai
     ports:
       - "127.0.0.1:6868:6868"
-    depends_on:
-      - backend
-    networks:
-      - anibt
     restart: unless-stopped
 
   peerbanhelper:
@@ -44,10 +28,4 @@ services:
       - "127.0.0.1:9898:9898"
     volumes:
       - ./peerbanhelper/data:/app/data
-    networks:
-      - anibt
     restart: unless-stopped
-
-networks:
-  anibt:
-    driver: bridge

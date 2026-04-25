@@ -93,7 +93,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div style={{ padding: '24px 28px 32px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--ctp-overlay1)' }}>
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ctp-green)', flexShrink: 0 }} />
-            PeerBanHelper
+            AniBT-Speed
           </div>
           <button
             onClick={() => { clearToken(); navigate({ to: '/login' }) }}

@@ -117,9 +117,7 @@
 
 ### 反吸血保护
 
-集成 PeerBanHelper 提供反吸血保护。PeerBanHelper 作为独立容器运行，通过 qBittorrent WebUI API 连接各实例，监控 Peer 行为并自动封禁恶意客户端。
-
-使用 PeerBanHelper 默认策略加 BTN 云端规则。首次启动后需通过 PeerBanHelper 管理界面完成初始配置，添加 qBittorrent 下载器连接。
+部署栈会同时启动 PeerBanHelper 附属容器。PeerBanHelper 独立通过 qBittorrent WebUI API 连接各实例，监控 Peer 行为并自动封禁恶意客户端；AniBT-Speed 前端和后端仍保持在同一个应用容器内，不再通过跨容器反向代理通信。
 
 ### Telegram 通知
 
@@ -146,21 +144,21 @@
 
 ## 技术架构
 
-所有服务运行在独立的 Docker bridge 网络中，仅前端 Nginx 暴露单一端口供外部访问。后端和 PeerBanHelper 完全隔离在内部网络，通过 Docker DNS 互相通信。前端 Nginx 反向代理 `/api/` 请求到后端。
+默认部署包含一个 AniBT-Speed 应用容器和一个 PeerBanHelper 附属容器。AniBT-Speed 容器内的 FastAPI 监听 `6868`，同时提供 `/api` 后端接口和 Vite 构建后的前端静态文件；浏览器与 API 保持同源访问，不再需要前端 Nginx 容器、后端容器和跨容器反向代理。
 
 ```mermaid
 graph TB
-    subgraph Docker 网络 anibt
-        FE[前端 Nginx]
-        BE[后端 FastAPI]
+    subgraph Docker 容器 anibt-speed
+        APP[FastAPI 应用]
+        UI[前端静态文件]
         DB[(SQLite)]
-        PBH[PeerBanHelper]
 
-        FE -->|反向代理 /api/| BE
-        BE --> DB
+        APP --> UI
+        APP --> DB
     end
 
-    User([用户浏览器]) -->|唯一暴露端口| FE
+    PBH[PeerBanHelper 容器]
+    User([用户浏览器]) -->|6868| APP
 
     subgraph 调度任务
         S1[空间检查 5min]
@@ -179,12 +177,12 @@ graph TB
 
     LB{负载均衡}
 
-    BE --> S1 & S2 & S3 & S4 & S5 & S6
+    APP --> S1 & S2 & S3 & S4 & S5 & S6
     S5 --> LB
     LB --> QB1 & QB2 & QBN
     S1 & S2 & S3 -->|WebUI API| QB1 & QB2 & QBN
     PBH -->|WebUI API| QB1 & QB2 & QBN
-    BE -->|Telegram API| TG[Telegram Bot]
+    APP -->|Telegram API| TG[Telegram Bot]
 ```
 
 ```mermaid
@@ -226,8 +224,8 @@ flowchart TB
 | 层级 | 技术 |
 |------|------|
 | 前端 | React 19, TypeScript, Vite, Tailwind CSS, TanStack Router, TanStack Query, Recharts |
-| 后端 | FastAPI, Python 3.11, SQLAlchemy, SQLite, APScheduler, qbittorrent-api, feedparser, PyJWT |
-| 部署 | Docker Compose, Nginx |
+| 后端 | FastAPI, Python 3.14, SQLAlchemy, SQLite, APScheduler, qbittorrent-api, feedparser, PyJWT |
+| 部署 | Docker Compose（AniBT-Speed 单应用容器 + PeerBanHelper 附属容器） |
 | 反吸血 | PeerBanHelper |
 
 ## 定时任务
@@ -257,7 +255,7 @@ flowchart TB
 git clone git@github.com:Yuri-NagaSaki/AniBT-Speed.git
 cd AniBT-Speed
 
-# 一键部署（自动生成 .env、构建镜像、启动服务、验证运行状态）
+# 一键部署（自动生成 .env、启动 AniBT-Speed 与 PeerBanHelper、验证运行状态）
 bash deploy.sh
 
 # 或手动部署
@@ -269,7 +267,7 @@ docker compose up -d --build
 ### 测试
 
 ```bash
-# 运行健康检查（容器状态、API 端点、网络隔离、时区、数据持久化）
+# 运行健康检查（容器状态、Web/API/PBH 端点、端口隔离、时区、数据持久化）
 bash test.sh
 ```
 
@@ -283,7 +281,7 @@ bash test.sh
 |----------|------|
 | `SECRET_KEY` | JWT 签名密钥。一键部署时自动生成，未设置时每次启动随机生成（重启后需重新登录） |
 | `ADMIN_PASSWORD` | 管理员登录密码。**必须修改**，使用默认值 "admin" 时会在日志中输出安全警告 |
-| `CORS_ORIGINS` | 允许跨域请求的来源（逗号分隔）。使用 Nginx 反代时无需设置 |
+| `CORS_ORIGINS` | 允许跨域请求的来源（逗号分隔）。默认 Web 与 API 同源访问，无需设置 |
 
 登录接口内置频率限制（每 IP 每 15 分钟最多 5 次尝试），防止暴力破解。
 

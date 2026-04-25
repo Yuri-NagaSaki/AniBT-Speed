@@ -1,9 +1,12 @@
+import os
+from collections import defaultdict
+from pathlib import Path
+import time
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 import jwt as pyjwt
-import time
-from collections import defaultdict
 
 from app.config import settings as app_settings
 from app.database import init_db
@@ -116,3 +119,34 @@ async def startup():
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
+
+
+def _frontend_dist_dir() -> Path | None:
+    configured = os.getenv("FRONTEND_DIST")
+    candidates = [Path(configured)] if configured else [
+        Path("/app/static"),
+        Path(__file__).resolve().parents[2] / "frontend" / "dist",
+    ]
+
+    for candidate in candidates:
+        index_file = candidate / "index.html"
+        if index_file.is_file():
+            return candidate.resolve()
+    return None
+
+
+_frontend_dist = _frontend_dist_dir()
+
+
+if _frontend_dist:
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_frontend(full_path: str):
+        if full_path == "api" or full_path.startswith("api/"):
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
+
+        requested = (_frontend_dist / full_path).resolve()
+        if not requested.is_relative_to(_frontend_dist):
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
+        if requested.is_file():
+            return FileResponse(requested)
+        return FileResponse(_frontend_dist / "index.html")

@@ -22,50 +22,39 @@ section() { echo -e "\n${YELLOW}[$1]${NC}"; }
 # ---------- Container status ----------
 section "容器状态"
 
-for svc in anibt-speed-backend anibt-speed-frontend anibt-speed-pbh; do
-    status=$(docker inspect -f '{{.State.Status}}' "$svc" 2>/dev/null || echo "not_found")
-    if [ "$status" = "running" ]; then
-        pass "$svc: running"
-    else
-        fail "$svc: $status"
-    fi
-done
-
-# ---------- Network ----------
-section "网络"
-
-network=$(docker network inspect anibt-speed_anibt -f '{{.Name}}' 2>/dev/null || echo "not_found")
-if [ "$network" != "not_found" ]; then
-    pass "Docker 网络 anibt-speed_anibt 存在"
+status=$(docker inspect -f '{{.State.Status}}' anibt-speed 2>/dev/null || echo "not_found")
+if [ "$status" = "running" ]; then
+    pass "anibt-speed: running"
 else
-    fail "Docker 网络 anibt-speed_anibt 不存在"
+    fail "anibt-speed: $status"
 fi
 
-# Check only frontend exposes ports to host
-frontend_ports=$(docker inspect -f '{{range $p, $conf := .NetworkSettings.Ports}}{{$p}} {{end}}' anibt-speed-frontend 2>/dev/null || echo "")
-backend_ports=$(docker inspect -f '{{range $p, $conf := .HostConfig.PortBindings}}{{$p}} {{end}}' anibt-speed-backend 2>/dev/null || echo "")
-pbh_ports=$(docker inspect -f '{{range $p, $conf := .HostConfig.PortBindings}}{{$p}} {{end}}' anibt-speed-pbh 2>/dev/null || echo "")
-
-if [ -n "$frontend_ports" ]; then
-    pass "前端暴露端口: $frontend_ports"
+pbh_status=$(docker inspect -f '{{.State.Status}}' anibt-speed-pbh 2>/dev/null || echo "not_found")
+if [ "$pbh_status" = "running" ]; then
+    pass "anibt-speed-pbh: running"
 else
-    skip "前端端口映射未检测到"
+    skip "anibt-speed-pbh: $pbh_status (首次启动可能需要更长时间)"
 fi
 
-if [ -z "$backend_ports" ]; then
-    pass "后端无暴露端口（仅内部网络）"
+# ---------- Port exposure ----------
+section "端口"
+
+app_ports=$(docker inspect -f '{{range $p, $conf := .NetworkSettings.Ports}}{{$p}} {{end}}' anibt-speed 2>/dev/null || echo "")
+if [ -n "$app_ports" ]; then
+    pass "应用暴露端口: $app_ports"
 else
-    fail "后端不应暴露端口: $backend_ports"
+    fail "应用端口映射未检测到"
 fi
 
-if [ -z "$pbh_ports" ]; then
-    pass "PBH 无暴露端口（仅内部网络）"
+pbh_ports=$(docker inspect -f '{{range $p, $conf := .NetworkSettings.Ports}}{{$p}} {{end}}' anibt-speed-pbh 2>/dev/null || echo "")
+if [ -n "$pbh_ports" ]; then
+    pass "PeerBanHelper 暴露端口: $pbh_ports"
 else
-    pass "PBH 暴露本地端口: $pbh_ports"
+    skip "PeerBanHelper 端口映射未检测到"
 fi
 
-# ---------- Frontend ----------
-section "前端（唯一对外端口 6868）"
+# ---------- Web UI ----------
+section "Web 面板（单一对外端口 6868）"
 
 code=$(curl -sf -o /dev/null -w '%{http_code}' http://127.0.0.1:6868/ 2>/dev/null || echo "000")
 if [ "$code" = "200" ]; then
@@ -74,8 +63,15 @@ else
     fail "GET / ($code)"
 fi
 
-# ---------- Backend API (via Nginx proxy) ----------
-section "后端 API（通过 Nginx 代理）"
+code=$(curl -sf -o /dev/null -w '%{http_code}' http://127.0.0.1:6868/dashboard 2>/dev/null || echo "000")
+if [ "$code" = "200" ]; then
+    pass "SPA fallback /dashboard ($code)"
+else
+    fail "SPA fallback /dashboard ($code)"
+fi
+
+# ---------- Backend API ----------
+section "后端 API（同容器）"
 
 # Health
 code=$(curl -sf -o /dev/null -w '%{http_code}' http://127.0.0.1:6868/api/health 2>/dev/null || echo "000")
@@ -140,11 +136,12 @@ fi
 section "端口隔离验证"
 
 if curl -sf --connect-timeout 2 http://127.0.0.1:8000/api/health >/dev/null 2>&1; then
-    fail "后端 8000 端口不应从主机直接访问"
+    fail "旧后端 8000 端口不应从主机直接访问"
 else
-    pass "后端 8000 端口已隔离"
+    pass "旧后端 8000 端口未暴露"
 fi
 
+# ---------- PeerBanHelper ----------
 section "PeerBanHelper"
 
 code=$(curl -sf -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1:9898/ 2>/dev/null || echo "000")
@@ -154,46 +151,15 @@ else
     skip "PeerBanHelper WebUI ($code) — 首次启动可能需要更长时间"
 fi
 
-# ---------- Internal connectivity (via docker exec) ----------
-section "内部网络连通性"
-
-backend_health=$(docker exec anibt-speed-frontend wget -qO- http://backend:8000/api/health 2>/dev/null && echo "ok" || echo "fail")
-if [ "$backend_health" = "ok" ]; then
-    pass "frontend -> backend:8000 连通"
-else
-    # Nginx proxy already tested above; this is just a direct connectivity check
-    # If proxy works, internal network is fine
-    if curl -sf http://127.0.0.1:6868/api/health >/dev/null 2>&1; then
-        pass "frontend -> backend:8000 连通 (通过代理验证)"
-    else
-        fail "frontend -> backend:8000 不通"
-    fi
-fi
-
-pbh_status=$(docker exec anibt-speed-backend curl -sf --connect-timeout 3 http://peerbanhelper:9898/ 2>/dev/null && echo "ok" || echo "fail")
-if [ "$pbh_status" = "ok" ]; then
-    pass "backend -> peerbanhelper:9898 连通"
-else
-    # Try with wget or python as fallback
-    pbh_status2=$(docker exec anibt-speed-backend python3 -c "import urllib.request; urllib.request.urlopen('http://peerbanhelper:9898/', timeout=3); print('ok')" 2>/dev/null || echo "fail")
-    if [ "$pbh_status2" = "ok" ]; then
-        pass "backend -> peerbanhelper:9898 连通"
-    else
-        skip "backend -> peerbanhelper:9898 (PBH 可能仍在初始化)"
-    fi
-fi
-
 # ---------- Timezone ----------
 section "时区"
 
-for svc in anibt-speed-backend anibt-speed-frontend; do
-    tz=$(docker exec "$svc" date +%Z 2>/dev/null || echo "?")
-    if [ "$tz" = "CST" ] || [ "$tz" = "Asia/Shanghai" ]; then
-        pass "$svc: $tz"
-    else
-        fail "$svc: $tz (expected CST)"
-    fi
-done
+tz=$(docker exec anibt-speed date +%Z 2>/dev/null || echo "?")
+if [ "$tz" = "CST" ] || [ "$tz" = "Asia/Shanghai" ]; then
+    pass "anibt-speed: $tz"
+else
+    fail "anibt-speed: $tz (expected CST)"
+fi
 
 # ---------- Data persistence ----------
 section "数据持久化"
@@ -220,8 +186,7 @@ echo ""
 
 if [ "$FAIL" -gt 0 ]; then
     echo -e "${RED}存在失败项，请检查日志：${NC}"
-    echo "  docker compose logs backend"
-    echo "  docker compose logs frontend"
+    echo "  docker compose logs app"
     exit 1
 else
     echo -e "${GREEN}所有核心服务运行正常！${NC}"
