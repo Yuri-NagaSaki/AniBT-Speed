@@ -55,6 +55,9 @@ export interface QueueConfig {
   keyword_cleanup_hours: number
   keyword_cleanup_keywords: string[]
   keyword_cleanup_max_per_run: number
+  age_cleanup_enabled: boolean
+  age_cleanup_months: number
+  age_cleanup_max_per_run: number
 }
 
 export interface RateLimitConfig {

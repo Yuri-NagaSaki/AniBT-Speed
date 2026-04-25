@@ -16,13 +16,16 @@ DEFAULT_QUEUE_CONFIG = {
     "min_seed_time_hours": 12,
     "exclude_tags": [],
     "probe_stopped_enabled": True,
-    "probe_interval_minutes": 15,
-    "probe_batch_size": 20,
-    "probe_duration_minutes": 6,
+    "probe_interval_minutes": 5,
+    "probe_batch_size": 50,
+    "probe_duration_minutes": 3,
     "keyword_cleanup_enabled": False,
     "keyword_cleanup_hours": 24,
     "keyword_cleanup_keywords": [],
     "keyword_cleanup_max_per_run": 20,
+    "age_cleanup_enabled": False,
+    "age_cleanup_months": 3,
+    "age_cleanup_max_per_run": 20,
 }
 
 _probe_started_at: dict[str, float] = {}
@@ -69,6 +72,10 @@ def _manage_queue(db: Session, instance: QBTInstance, config: dict):
         cleanup_enabled = config.get("keyword_cleanup_enabled", False) and cleanup_keywords
         cleanup_limit = config.get("keyword_cleanup_max_per_run", 20)
         cleanup_count = 0
+        age_cleanup_enabled = config.get("age_cleanup_enabled", False)
+        age_cleanup_after = max(int(config.get("age_cleanup_months", 3)), 1) * 30 * 24 * 3600
+        age_cleanup_limit = max(int(config.get("age_cleanup_max_per_run", 20)), 1)
+        age_cleanup_count = 0
         probing_hashes = _manage_probe_windows(client, torrents, config, now, min_seed, exclude)
 
         for t in torrents:
@@ -104,6 +111,21 @@ def _manage_queue(db: Session, instance: QBTInstance, config: dict):
                         )
                         cleanup_count += 1
                         continue
+
+            if age_cleanup_enabled and age_cleanup_count < age_cleanup_limit:
+                seed_age = _seed_age_seconds(t, now)
+                if seed_age >= age_cleanup_after:
+                    client.delete_torrent(t.hash)
+                    age_months = seed_age / (30 * 24 * 3600)
+                    logger.info(f"Deleted by age cleanup: {t.name} (seed age: {age_months:.1f}mo)")
+                    db.add(ActionLog(
+                        action="delete",
+                        instance_id=instance.id,
+                        torrent_name=t.name,
+                        details=f"Age cleanup: seed_age={age_months:.1f}mo",
+                    ))
+                    age_cleanup_count += 1
+                    continue
 
             age = now - t.added_on
             if age < min_seed:
