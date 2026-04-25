@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { settingsApi } from '../api/client'
 import { Save, RotateCcw } from 'lucide-react'
-import { Button, Input, PageHeader, Panel, Skeleton, Toggle } from './ui'
+import { Button, Input, PageHeader, Skeleton, Toggle } from './ui'
 
 interface FieldDef {
   key: string
@@ -66,12 +66,12 @@ export default function SettingsForm({ category, title, description, fields }: S
   }
 
   return (
-    <div style={{ maxWidth: 780 }}>
+    <div>
       <PageHeader title={title} description={description} kicker="Policy" />
 
-      <Panel padded>
+      <div className="settings-grid">
         {fields.map((field, i) => (
-          <div key={field.key} className="setting-row" style={{ borderBottom: i < fields.length - 1 ? undefined : '0' }}>
+          <div key={field.key} className="setting-card" style={{ animationDelay: `${i * 24}ms` }}>
             <div>
               <div className="field-label" style={{ color: 'var(--text-primary)' }}>{field.label}</div>
               {field.help && <div className="field-help" style={{ marginTop: 7 }}>{field.help}</div>}
@@ -108,7 +108,7 @@ export default function SettingsForm({ category, title, description, fields }: S
             </div>
           </div>
         ))}
-      </Panel>
+      </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 28 }}>
         <Button

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { telegramApi } from '../api/client'
 import { Save, Send, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
-import { Button, PageHeader } from '../components/ui'
+import { Button, Input, PageHeader, SectionLabel, Toggle } from '../components/ui'
 
 const toggleFields = [
   { key: 'notify_new_download', label: '新种子下载', desc: '有新种子开始下载时通知' },
@@ -13,19 +13,6 @@ const toggleFields = [
   { key: 'notify_space_alert', label: '空间告警', desc: '存储空间不足时告警' },
   { key: 'daily_summary', label: '每日统计', desc: '每日定时发送运行数据摘要' },
 ]
-
-const tgInputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '14px 16px',
-  borderRadius: 10,
-  fontSize: 14,
-  background: 'var(--ctp-surface0)',
-  border: '1px solid var(--ctp-surface1)',
-  color: 'var(--ctp-text)',
-  fontFamily: '"Geist Mono", monospace',
-  outline: 'none',
-  transition: 'border-color 0.15s ease',
-}
 
 export default function Telegram() {
   const queryClient = useQueryClient()
@@ -65,7 +52,7 @@ export default function Telegram() {
   }
 
   return (
-    <div style={{ maxWidth: 780 }}>
+    <div>
       <PageHeader
         title="Telegram 通知"
         description="配置 Telegram Bot 推送通知"
@@ -92,56 +79,29 @@ export default function Telegram() {
       />
 
       {/* Connection settings */}
-      <div style={{ marginBottom: 56 }}>
-        <div style={{
-          fontSize: 12, fontWeight: 500,
-          textTransform: 'uppercase' as const,
-          letterSpacing: '0.1em',
-          color: 'var(--ctp-overlay1)',
-          marginBottom: 24,
-        }}>
-          连接设置
-        </div>
+      <div style={{ marginBottom: 48 }}>
+        <SectionLabel>连接设置</SectionLabel>
 
-        {/* Enable toggle */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '24px 0',
-          borderBottom: '1px solid var(--ctp-surface0)',
-        }}>
-          <div>
-            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)' }}>启用通知</span>
-            <p style={{ fontSize: 13, color: 'var(--ctp-overlay1)', marginTop: 6 }}>开启 Telegram Bot 消息推送</p>
+        <div className="form-panel">
+          <div className="setting-row" style={{ paddingTop: 0 }}>
+            <div>
+              <span className="field-label" style={{ color: 'var(--text-primary)' }}>启用通知</span>
+              <p className="field-help" style={{ marginTop: 7 }}>开启 Telegram Bot 消息推送</p>
+            </div>
+            <div className="setting-control">
+              <Toggle checked={!!form.enabled} onCheckedChange={(enabled) => setForm({ ...form, enabled })} label="启用通知" />
+            </div>
           </div>
-          <button onClick={() => setForm({ ...form, enabled: !form.enabled })}
-            style={{
-              position: 'relative', width: 44, height: 24,
-              borderRadius: 12, border: 'none', cursor: 'pointer',
-              background: form.enabled ? 'var(--ctp-mauve)' : 'var(--ctp-surface2)',
-              transition: 'background 0.2s ease',
-            }}>
-            <div style={{
-              position: 'absolute', top: 2,
-              left: form.enabled ? 22 : 2,
-              width: 20, height: 20, borderRadius: 10,
-              background: form.enabled ? 'var(--ctp-crust)' : 'var(--ctp-overlay0)',
-              transition: 'all 0.2s ease',
-            }} />
-          </button>
-        </div>
-
-        <div style={{ paddingTop: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div className="form-grid-wide">
           <div>
             <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ctp-subtext0)', marginBottom: 10 }}>
               Bot Token
             </label>
-            <input
+            <Input
               value={form.bot_token || ''}
               onChange={(e) => setForm({ ...form, bot_token: e.target.value })}
               placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
-              style={tgInputStyle}
-              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-mauve)' }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }}
+              className="mono"
             />
           </div>
 
@@ -149,58 +109,33 @@ export default function Telegram() {
             <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ctp-subtext0)', marginBottom: 10 }}>
               Chat ID
             </label>
-            <input
+            <Input
               value={form.chat_id || ''}
               onChange={(e) => setForm({ ...form, chat_id: e.target.value })}
               placeholder="-100123456789"
-              style={tgInputStyle}
-              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-mauve)' }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }}
+              className="mono"
             />
+          </div>
           </div>
         </div>
       </div>
 
       {/* Notification events */}
       <div>
-        <div style={{
-          fontSize: 12, fontWeight: 500,
-          textTransform: 'uppercase' as const,
-          letterSpacing: '0.1em',
-          color: 'var(--ctp-overlay1)',
-          marginBottom: 24,
-        }}>
-          通知事件
-        </div>
-        <div>
-          {toggleFields.map(({ key, label, desc }, i) => (
+        <SectionLabel>通知事件</SectionLabel>
+        <div className="settings-grid">
+          {toggleFields.map(({ key, label, desc }) => (
             <div
               key={key}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '24px 0',
-                borderBottom: i < toggleFields.length - 1 ? '1px solid var(--ctp-surface0)' : 'none',
-              }}
+              className="setting-card"
             >
               <div>
-                <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)' }}>{label}</span>
-                <p style={{ fontSize: 13, color: 'var(--ctp-overlay1)', marginTop: 6 }}>{desc}</p>
+                <span className="field-label" style={{ color: 'var(--text-primary)' }}>{label}</span>
+                <p className="field-help" style={{ marginTop: 7 }}>{desc}</p>
               </div>
-              <button onClick={() => setForm({ ...form, [key]: !form[key] })}
-                style={{
-                  position: 'relative', width: 44, height: 24,
-                  borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0, marginLeft: 20,
-                  background: form[key] ? 'var(--ctp-mauve)' : 'var(--ctp-surface2)',
-                  transition: 'background 0.2s ease',
-                }}>
-                <div style={{
-                  position: 'absolute', top: 2,
-                  left: form[key] ? 22 : 2,
-                  width: 20, height: 20, borderRadius: 10,
-                  background: form[key] ? 'var(--ctp-crust)' : 'var(--ctp-overlay0)',
-                  transition: 'all 0.2s ease',
-                }} />
-              </button>
+              <div className="setting-control">
+                <Toggle checked={!!form[key]} onCheckedChange={(checked) => setForm({ ...form, [key]: checked })} label={label} />
+              </div>
             </div>
           ))}
         </div>

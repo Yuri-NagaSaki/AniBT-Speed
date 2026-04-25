@@ -62,22 +62,15 @@ export default function Logs() {
         </div>
       ) : (
         <>
-          <div style={{
-            background: 'var(--ctp-surface0)',
-            border: '1px solid var(--ctp-surface1)',
-            borderRadius: 14,
-            overflow: 'hidden',
-          }}>
+          <div className="entity-list">
             {data.logs.map((log: any, idx: number) => {
               const a = actionLabels[log.action] || { label: log.action, color: 'var(--ctp-subtext0)' }
               return (
                 <div
                   key={log.id}
+                  className="log-row"
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 16,
-                    padding: '20px 28px',
-                    borderBottom: idx < data.logs.length - 1 ? '1px solid var(--ctp-surface1)' : 'none',
-                    transition: 'background 0.15s ease',
+                    borderBottom: idx < data.logs.length - 1 ? '1px solid var(--line-soft)' : 'none',
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(69,71,90,0.3)' }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
@@ -88,7 +81,7 @@ export default function Logs() {
                   }}>
                     {a.label}
                   </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ minWidth: 0 }}>
                     <p style={{
                       fontSize: 14, color: 'var(--ctp-text)', lineHeight: 1.4,
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
