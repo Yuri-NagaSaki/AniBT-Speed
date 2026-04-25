@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_QUEUE_CONFIG = {
     "enabled": True,
-    "pause_when_no_leechers": True,
+    "pause_when_no_leechers": False,
     "resume_when_leechers_gt": 0,
     "min_seed_time_hours": 1,
     "exclude_tags": [],
