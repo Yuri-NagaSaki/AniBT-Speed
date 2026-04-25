@@ -27,7 +27,6 @@ export default function Layout({ children }: { children: ReactNode }) {
       <aside className="sidebar">
         <div className="brand-block">
           <div className="brand-title">AniBT-Speed</div>
-          <div className="brand-subtitle">单容器种群控制台</div>
         </div>
 
         <nav className="nav-list" aria-label="主导航">
@@ -51,14 +50,13 @@ export default function Layout({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="sidebar-footer">
-          <div className="status-pill">
+          <div className="sidebar-control status-pill">
             <span className="status-dot" />
             AniBT-Speed
           </div>
           <button
             onClick={() => { clearToken(); navigate({ to: '/login' }) }}
-            className="btn btn-ghost"
-            style={{ justifyContent: 'flex-start' }}
+            className="sidebar-control sidebar-action"
           >
             <LogOut size={15} />
             退出登录
