@@ -60,10 +60,11 @@ def create_feed(body: RSSCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(feed)
 
-    # Sync to qBittorrent native RSS only for fixed-instance feeds
+    # AniBT-Speed owns RSS downloads. Remove legacy qB native rules that could
+    # add torrents without the configured instance tag.
     if feed.enabled and feed.instance_id and feed.instance_id > 0:
         try:
-            _sync_rss_to_qbt(db, feed)
+            _disable_qbt_native_rss_rule(db, feed)
         except Exception:
             pass
 
@@ -83,7 +84,7 @@ def update_feed(feed_id: int, body: RSSUpdate, db: Session = Depends(get_db)):
 
     if feed.enabled and feed.instance_id and feed.instance_id > 0:
         try:
-            _sync_rss_to_qbt(db, feed)
+            _disable_qbt_native_rss_rule(db, feed)
         except Exception:
             pass
 
@@ -111,33 +112,16 @@ def delete_feed(feed_id: int, db: Session = Depends(get_db)):
     return {"ok": True}
 
 
-def _sync_rss_to_qbt(db: Session, feed: RSSFeed):
-    """Sync RSS feed + auto-download rule to qBittorrent."""
+def _disable_qbt_native_rss_rule(db: Session, feed: RSSFeed):
+    """Disable legacy qB RSS auto-download rules for this feed.
+
+    The server-side poller adds torrents with the configured save path and tag.
+    Letting qB's native RSS rule also auto-download can race with the poller and
+    create untagged torrents.
+    """
     inst = db.query(QBTInstance).get(feed.instance_id)
     if not inst:
         return
 
     client = get_qbt_client(inst.id, inst.url, inst.username, inst.password)
-
-    # Add/update feed
-    try:
-        client.add_rss_feed(url=feed.url, path=feed.name)
-    except Exception:
-        pass  # may already exist
-
-    # Set auto-download rule
-    # Use instance's tag
-    if inst.tag:
-        try:
-            client.create_tags([inst.tag])
-        except Exception:
-            pass
-
-    rule = {
-        "enabled": feed.enabled,
-        "mustContain": feed.include_filter,
-        "mustNotContain": feed.exclude_filter,
-        "savePath": inst.download_path,
-        "affectedFeeds": [feed.url],
-    }
-    client.set_rss_rule(rule_name=f"anibt-speed-{feed.id}", rule_def=rule)
+    client.remove_rss_rule(f"anibt-speed-{feed.id}")

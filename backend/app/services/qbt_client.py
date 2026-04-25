@@ -77,6 +77,33 @@ class QBTClient:
         paused = sum(1 for t in torrents if t.state in ("pausedUP", "pausedDL"))
         return {"total": len(torrents), "active": active, "paused": paused}
 
+    def get_storage_status(self, save_path: str = "") -> dict:
+        """Estimate qBittorrent storage usage from WebUI data."""
+        c = self.client
+        maindata = c.sync_maindata(rid=0)
+        server_state = maindata.get("server_state", {}) if maindata else {}
+        free_bytes = int(server_state.get("free_space_on_disk") or 0)
+
+        torrents = c.torrents.info()
+        normalized_path = save_path.rstrip("/")
+        used_bytes = 0
+        for torrent in torrents:
+            torrent_path = (getattr(torrent, "save_path", "") or "").rstrip("/")
+            if normalized_path and torrent_path and not torrent_path.startswith(normalized_path):
+                continue
+            used_bytes += int(getattr(torrent, "size", 0) or 0)
+
+        total_bytes = used_bytes + free_bytes
+        used_percent = (used_bytes / total_bytes) * 100 if total_bytes > 0 else 0
+        return {
+            "path": save_path,
+            "used": used_bytes,
+            "free": free_bytes,
+            "total": total_bytes,
+            "used_percent": used_percent,
+            "source": "qbt",
+        }
+
     def delete_torrent(self, torrent_hash: str, delete_files: bool = True):
         self.client.torrents_delete(delete_files=delete_files, torrent_hashes=torrent_hash)
 
@@ -110,6 +137,10 @@ class QBTClient:
 
     def add_torrent_url(self, url: str, save_path: str = "", tags: str = "", category: str = "") -> bool:
         """Add a torrent by URL or magnet link. Returns True on success."""
+        before_hashes: set[str] = set()
+        if tags:
+            before_hashes = {t.hash for t in self.client.torrents.info()}
+
         kwargs: dict = {"urls": url}
         if save_path:
             kwargs["save_path"] = save_path
@@ -118,7 +149,14 @@ class QBTClient:
         if category:
             kwargs["category"] = category
         result = self.client.torrents_add(**kwargs)
-        return result == "Ok."
+        ok = result == "Ok."
+
+        if ok and tags:
+            after_hashes = {t.hash for t in self.client.torrents.info()}
+            for torrent_hash in after_hashes - before_hashes:
+                self.add_tags_to_torrents(torrent_hash, tags)
+
+        return ok
 
 
 _instances: dict[int, QBTClient] = {}

@@ -20,6 +20,7 @@ def poll_rss_feeds():
         feeds = db.query(RSSFeed).filter_by(enabled=True).all()
         for feed in feeds:
             try:
+                _disable_legacy_qbt_rss_rule(db, feed)
                 _poll_single_feed(db, feed)
             except Exception as e:
                 logger.error(f"RSS poll error for '{feed.name}': {e}")
@@ -27,6 +28,21 @@ def poll_rss_feeds():
         logger.error(f"RSS poller error: {e}")
     finally:
         db.close()
+
+
+def _disable_legacy_qbt_rss_rule(db: Session, feed: RSSFeed):
+    if not feed.instance_id or feed.instance_id <= 0:
+        return
+
+    inst = db.query(QBTInstance).get(feed.instance_id)
+    if not inst:
+        return
+
+    try:
+        client = get_qbt_client(inst.id, inst.url, inst.username, inst.password)
+        client.remove_rss_rule(f"anibt-speed-{feed.id}")
+    except Exception:
+        pass
 
 
 def _poll_single_feed(db: Session, feed: RSSFeed):

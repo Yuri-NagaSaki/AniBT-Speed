@@ -2,6 +2,7 @@
 import logging
 import time
 import shutil
+from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
@@ -18,7 +19,7 @@ DEFAULT_SPACE_CONFIG = {
     "boundary_hours": 12,
     "max_torrent_size_gb": 0,  # 0 = no limit
     "max_deletions_per_run": 20,
-    "check_path": "/app/data",
+    "check_path": "",
     "check_interval_minutes": 5,
 }
 
@@ -38,30 +39,63 @@ def check_space():
         if not config["enabled"]:
             return
 
-        check_path = config["check_path"]
-        usage = shutil.disk_usage(check_path)
-        used_percent = (usage.used / usage.total) * 100
-
-        if used_percent < config["threshold_percent"]:
+        instances = db.query(QBTInstance).filter_by(enabled=True).all()
+        if not instances:
             return
 
-        logger.info(f"Space usage {used_percent:.1f}% exceeds threshold {config['threshold_percent']}%, cleaning up...")
-
-        send_notification(
-            f"⚠️ <b>空间告警</b>\n"
-            f"磁盘使用率: {used_percent:.1f}%\n"
-            f"阈值: {config['threshold_percent']}%\n"
-            f"开始清理..."
-        )
-
-        instances = db.query(QBTInstance).filter_by(enabled=True).all()
         for inst in instances:
+            status = _get_instance_storage_status(inst, config)
+            if not status:
+                continue
+
+            used_percent = status["used_percent"]
+            if used_percent < config["threshold_percent"]:
+                continue
+
+            logger.info(
+                f"Space usage for {inst.name} ({status['path'] or 'qB default path'}) "
+                f"is {used_percent:.1f}% via {status['source']}, exceeds threshold "
+                f"{config['threshold_percent']}%, cleaning up..."
+            )
+
+            send_notification(
+                f"⚠️ <b>空间告警</b>\n"
+                f"实例: {inst.name}\n"
+                f"目录: {status['path'] or 'qB 默认目录'}\n"
+                f"磁盘使用率: {used_percent:.1f}%\n"
+                f"阈值: {config['threshold_percent']}%\n"
+                f"开始清理..."
+            )
+
             _cleanup_instance(db, inst, config)
 
     except Exception as e:
         logger.error(f"Space check error: {e}")
     finally:
         db.close()
+
+
+def _get_instance_storage_status(instance: QBTInstance, config: dict) -> dict | None:
+    check_path = (instance.download_path or config.get("check_path") or "").strip()
+    if check_path:
+        local_path = Path(check_path)
+        if local_path.exists():
+            usage = shutil.disk_usage(local_path)
+            return {
+                "path": check_path,
+                "used": usage.used,
+                "free": usage.free,
+                "total": usage.total,
+                "used_percent": (usage.used / usage.total) * 100,
+                "source": "local",
+            }
+
+    try:
+        client = get_qbt_client(instance.id, instance.url, instance.username, instance.password)
+        return client.get_storage_status(check_path)
+    except Exception as e:
+        logger.error(f"Space status error for instance {instance.name}: {e}")
+        return None
 
 
 def _cleanup_instance(db: Session, instance: QBTInstance, config: dict):
@@ -101,8 +135,8 @@ def _cleanup_instance(db: Session, instance: QBTInstance, config: dict):
                 logger.warning(f"Reached max deletion limit ({max_deletions}) for {instance.name}, stopping cleanup")
                 break
 
-            usage = shutil.disk_usage(config["check_path"])
-            if (usage.used / usage.total) * 100 < config["threshold_percent"]:
+            status = _get_instance_storage_status(instance, config)
+            if not status or status["used_percent"] < config["threshold_percent"]:
                 break
 
             client.delete_torrent(t.hash)

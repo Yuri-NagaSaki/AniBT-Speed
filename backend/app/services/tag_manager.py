@@ -38,7 +38,7 @@ def _apply_tags_for_instance(instance: QBTInstance):
 
         torrents = client.client.torrents.info()
         for t in torrents:
-            existing_tags = set(t.tags.split(",")) if t.tags else set()
+            existing_tags = {tag.strip() for tag in t.tags.split(",") if tag.strip()} if t.tags else set()
             if tag not in existing_tags:
                 client.add_tags_to_torrents(t.hash, tag)
                 logger.info(f"Tagged '{t.name}' with '{tag}' on {instance.name}")
