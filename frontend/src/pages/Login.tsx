@@ -26,10 +26,9 @@ export default function Login() {
     <div className="login-shell">
       <div className="login-card">
         <div style={{ marginBottom: 28 }}>
-          <div className="brand-mark" style={{ marginInline: 'auto' }}>A</div>
-          <h1 className="page-title" style={{ fontSize: 30, textAlign: 'center' }}>AniBT-Speed</h1>
+          <h1 className="page-title" style={{ fontSize: 30, textAlign: 'center', letterSpacing: '-0.01em' }}>AniBT-Speed</h1>
           <p className="page-description" style={{ textAlign: 'center', marginInline: 'auto' }}>
-            种群加速管理平台
+            单容器种群控制台
           </p>
         </div>
 
