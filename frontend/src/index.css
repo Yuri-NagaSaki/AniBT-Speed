@@ -320,24 +320,6 @@ a:focus-visible {
   gap: 20px;
 }
 
-.settings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 18px;
-}
-
-.setting-card {
-  min-height: 148px;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: 20px;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-lg);
-  background: color-mix(in oklch, var(--bg-panel) 90%, transparent);
-  padding: 22px;
-  animation: reveal .32s var(--ease-out) both;
-}
-
 .entity-list {
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-lg);
@@ -502,7 +484,7 @@ a:focus-visible {
 
 .setting-row {
   display: grid;
-  grid-template-columns: minmax(260px, .85fr) minmax(260px, 420px);
+  grid-template-columns: minmax(320px, 1fr) minmax(260px, 360px);
   gap: 28px;
   align-items: center;
   padding: 24px 0;

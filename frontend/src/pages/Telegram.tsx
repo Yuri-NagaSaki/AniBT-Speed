@@ -123,11 +123,12 @@ export default function Telegram() {
       {/* Notification events */}
       <div>
         <SectionLabel>通知事件</SectionLabel>
-        <div className="settings-grid">
-          {toggleFields.map(({ key, label, desc }) => (
+        <div className="form-panel">
+          {toggleFields.map(({ key, label, desc }, i) => (
             <div
               key={key}
-              className="setting-card"
+              className="setting-row"
+              style={{ borderBottom: i < toggleFields.length - 1 ? undefined : '0' }}
             >
               <div>
                 <span className="field-label" style={{ color: 'var(--text-primary)' }}>{label}</span>
