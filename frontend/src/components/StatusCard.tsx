@@ -13,35 +13,10 @@ export default function StatusCard({ title, value, subtitle, color, accent }: St
   const tint = color ?? accent
 
   return (
-    <div style={{ padding: '24px 0' }}>
-      <div style={{
-        fontSize: 11,
-        fontWeight: 500,
-        textTransform: 'uppercase' as const,
-        letterSpacing: '0.1em',
-        color: 'var(--ctp-overlay1)',
-        marginBottom: 12,
-      }}>
-        {title}
-      </div>
-      <div style={{
-        fontSize: 28,
-        fontWeight: 600,
-        letterSpacing: '-0.03em',
-        lineHeight: 1.2,
-        color: tint ?? 'var(--ctp-text)',
-      }}>
-        {value}
-      </div>
-      {subtitle && (
-        <div style={{
-          fontSize: 12,
-          color: 'var(--ctp-overlay0)',
-          marginTop: 8,
-        }}>
-          {subtitle}
-        </div>
-      )}
+    <div className="metric-card">
+      <div className="metric-label">{title}</div>
+      <div className="metric-value" style={{ color: tint ?? 'var(--text-primary)' }}>{value}</div>
+      {subtitle && <div className="metric-subtitle">{subtitle}</div>}
     </div>
   )
 }

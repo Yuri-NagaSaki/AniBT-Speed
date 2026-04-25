@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { rssApi, instancesApi } from '../api/client'
 import { Plus, Trash2, Pencil, X, Clock, Power } from 'lucide-react'
+import { Button, PageHeader } from '../components/ui'
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -74,31 +75,16 @@ export default function RSSManager() {
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 48 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--ctp-text)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>
-            RSS 管理
-          </h1>
-          <p style={{ fontSize: 14, color: 'var(--ctp-subtext0)', marginTop: 8, lineHeight: 1.6 }}>
-            管理 RSS 订阅源和自动下载规则
-          </p>
-        </div>
-        <button
-          onClick={() => { resetForm(); setShowForm(true) }}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '12px 24px', borderRadius: 10, border: 'none', cursor: 'pointer',
-            fontSize: 14, fontWeight: 500, fontFamily: 'inherit',
-            background: 'var(--ctp-mauve)', color: 'var(--ctp-crust)',
-            transition: 'opacity 0.15s ease',
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9' }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
-        >
-          <Plus size={16} /> 添加 RSS 源
-        </button>
-      </div>
+      <PageHeader
+        title="RSS 管理"
+        description="管理 RSS 订阅源、过滤规则与目标实例"
+        kicker="Automation"
+        actions={(
+          <Button onClick={() => { resetForm(); setShowForm(true) }}>
+            <Plus size={16} /> 添加 RSS 源
+          </Button>
+        )}
+      />
 
       {/* Add/Edit Form — slide-down panel */}
       {showForm && (

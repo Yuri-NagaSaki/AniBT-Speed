@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { telegramApi } from '../api/client'
 import { Save, Send, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import { Button, PageHeader } from '../components/ui'
 
 const toggleFields = [
   { key: 'notify_new_download', label: '新种子下载', desc: '有新种子开始下载时通知' },
@@ -64,52 +65,31 @@ export default function Telegram() {
   }
 
   return (
-    <div style={{ maxWidth: 720, animation: 'fadeIn 0.3s ease-out' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 48 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--ctp-text)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>
-            Telegram 通知
-          </h1>
-          <p style={{ fontSize: 14, color: 'var(--ctp-subtext0)', marginTop: 8, lineHeight: 1.6 }}>
-            配置 Telegram Bot 推送通知
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button
-            onClick={() => testMutation.mutate()}
-            disabled={testMutation.isPending}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '12px 24px', borderRadius: 10, cursor: 'pointer',
-              fontSize: 14, fontWeight: 500, fontFamily: 'inherit',
-              background: 'transparent', color: 'var(--ctp-teal)',
-              border: '1px solid var(--ctp-surface1)',
-              transition: 'border-color 0.15s ease',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface2)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--ctp-surface1)' }}
-          >
-            {testMutation.isPending ? <Loader2 size={15} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Send size={15} />}
-            测试发送
-          </button>
-          <button
-            onClick={() => saveMutation.mutate(form)}
-            disabled={saveMutation.isPending}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '12px 24px', borderRadius: 10, cursor: 'pointer',
-              fontSize: 14, fontWeight: 500, fontFamily: 'inherit',
-              background: saved ? 'var(--ctp-green)' : 'var(--ctp-mauve)',
-              color: 'var(--ctp-crust)', border: 'none',
-              opacity: saveMutation.isPending ? 0.6 : 1,
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <Save size={15} /> {saved ? '已保存 ✓' : '保存'}
-          </button>
-        </div>
-      </div>
+    <div style={{ maxWidth: 780 }}>
+      <PageHeader
+        title="Telegram 通知"
+        description="配置 Telegram Bot 推送通知"
+        kicker="Notification"
+        actions={(
+          <div style={{ display: 'flex', gap: 12 }}>
+            <Button
+              variant="secondary"
+              onClick={() => testMutation.mutate()}
+              disabled={testMutation.isPending}
+            >
+              {testMutation.isPending ? <Loader2 size={15} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Send size={15} />}
+              测试发送
+            </Button>
+            <Button
+              onClick={() => saveMutation.mutate(form)}
+              disabled={saveMutation.isPending}
+              style={{ background: saved ? 'var(--ctp-green)' : undefined }}
+            >
+              <Save size={15} /> {saved ? '已保存 ✓' : '保存'}
+            </Button>
+          </div>
+        )}
+      />
 
       {/* Connection settings */}
       <div style={{ marginBottom: 56 }}>

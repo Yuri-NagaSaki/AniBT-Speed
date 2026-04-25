@@ -3,6 +3,7 @@ import { instancesApi, statsApi } from '../api/client'
 import StatusCard from '../components/StatusCard'
 import { Upload, Download } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { EmptyState, PageHeader, Panel, SectionLabel, Skeleton } from '../components/ui'
 
 function formatBytes(bytes: number): string {
   if (!bytes || bytes === 0) return '0 B'
@@ -50,29 +51,21 @@ export default function Dashboard() {
   const activeTorrents = connectedInstances.reduce((sum: number, i: any) => sum + (i.status?.active || 0), 0)
 
   return (
-    <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-      {/* Page header */}
-      <div style={{ marginBottom: 48 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--ctp-text)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>
-          仪表盘
-        </h1>
-        <p style={{ fontSize: 14, color: 'var(--ctp-subtext0)', marginTop: 8, lineHeight: 1.6 }}>
-          系统运行状态概览 · {connectedInstances.length} 个实例在线
-        </p>
-      </div>
+    <div>
+      <PageHeader
+        title="仪表盘"
+        description={`系统运行状态概览 · ${connectedInstances.length} 个实例在线`}
+        kicker="Live overview"
+      />
 
       {/* Stats Grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-        gap: 32,
-        marginBottom: 56,
-      }}>
+      <div className="metric-grid">
         {loadingInstances ? (
           Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} style={{ padding: '24px 0' }}>
-              <div style={{ height: 12, width: 64, borderRadius: 4, background: 'var(--ctp-surface0)', marginBottom: 16 }} />
-              <div style={{ height: 24, width: 96, borderRadius: 4, background: 'var(--ctp-surface0)' }} />
+            <div key={i} className="metric-card">
+              <Skeleton width={72} height={12} />
+              <div style={{ height: 14 }} />
+              <Skeleton width={116} height={30} />
             </div>
           ))
         ) : (
@@ -86,65 +79,45 @@ export default function Dashboard() {
       </div>
 
       {/* Today summary */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 56, flexWrap: 'wrap' }}>
-        {loadingSummary ? (
-          <>
-            {[1, 2, 3].map((n) => (
-              <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <div>
-                  <div style={{ height: 10, width: 48, borderRadius: 4, background: 'var(--ctp-surface0)', marginBottom: 8 }} />
-                  <div style={{ height: 14, width: 72, borderRadius: 4, background: 'var(--ctp-surface0)' }} />
-                </div>
-                {n < 3 && <div style={{ width: 1, height: 28, background: 'var(--ctp-surface1)' }} />}
+      <Panel padded>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 24 }}>
+          {loadingSummary ? (
+            [1, 2, 3].map((n) => (
+              <div key={n}>
+                <Skeleton width={58} height={12} />
+                <div style={{ height: 10 }} />
+                <Skeleton width={88} height={16} />
               </div>
-            ))}
-          </>
-        ) : summary ? (
-          <>
-            <div>
-              <span style={{ fontSize: 12, display: 'block', marginBottom: 6, color: 'var(--ctp-overlay1)' }}>今日上传</span>
-              <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)' }}>{formatBytes(summary.today_uploaded_bytes || 0)}</span>
-            </div>
-            <div style={{ width: 1, height: 28, background: 'var(--ctp-surface1)' }} />
-            <div>
-              <span style={{ fontSize: 12, display: 'block', marginBottom: 6, color: 'var(--ctp-overlay1)' }}>今日下载</span>
-              <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)' }}>{formatBytes(summary.today_downloaded_bytes || 0)}</span>
-            </div>
-            <div style={{ width: 1, height: 28, background: 'var(--ctp-surface1)' }} />
-            <div>
-              <span style={{ fontSize: 12, display: 'block', marginBottom: 6, color: 'var(--ctp-overlay1)' }}>今日操作</span>
-              <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)' }}>{summary.today_actions || 0}</span>
-            </div>
-          </>
-        ) : null}
-      </div>
+            ))
+          ) : summary ? (
+            <>
+              <div>
+                <span className="metric-label">今日上传</span>
+                <div style={{ marginTop: 8, fontSize: 17, fontWeight: 680, color: 'var(--text-primary)' }}>{formatBytes(summary.today_uploaded_bytes || 0)}</div>
+              </div>
+              <div>
+                <span className="metric-label">今日下载</span>
+                <div style={{ marginTop: 8, fontSize: 17, fontWeight: 680, color: 'var(--text-primary)' }}>{formatBytes(summary.today_downloaded_bytes || 0)}</div>
+              </div>
+              <div>
+                <span className="metric-label">今日操作</span>
+                <div style={{ marginTop: 8, fontSize: 17, fontWeight: 680, color: 'var(--text-primary)' }}>{summary.today_actions || 0}</div>
+              </div>
+            </>
+          ) : null}
+        </div>
+      </Panel>
 
       {/* Traffic chart */}
-      <div style={{ marginBottom: 56 }}>
-        <div style={{
-          fontSize: 12,
-          fontWeight: 500,
-          textTransform: 'uppercase' as const,
-          letterSpacing: '0.1em',
-          color: 'var(--ctp-overlay1)',
-          marginBottom: 24,
-        }}>
-          流量趋势
-        </div>
-        <div style={{
-          background: 'var(--ctp-surface0)',
-          border: '1px solid var(--ctp-surface1)',
-          borderRadius: 14,
-          padding: '24px 32px 32px 32px',
-        }}>
+      <div style={{ marginTop: 56, marginBottom: 56 }}>
+        <SectionLabel>流量趋势</SectionLabel>
+        <Panel padded>
           {loadingTraffic ? (
             <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--ctp-overlay0)' }}>加载流量数据...</span>
+              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>加载流量数据...</span>
             </div>
           ) : chartData.length === 0 ? (
-            <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--ctp-overlay0)' }}>暂无流量数据</span>
-            </div>
+            <EmptyState title="暂无流量数据" description="流量记录任务运行后会在这里显示趋势" />
           ) : (
             <ResponsiveContainer width="100%" height={240}>
               <AreaChart data={chartData} margin={{ top: 16, right: 8, bottom: 0, left: 0 }}>
@@ -189,43 +162,30 @@ export default function Dashboard() {
               </AreaChart>
             </ResponsiveContainer>
           )}
-        </div>
+        </Panel>
       </div>
 
       {/* Instance list */}
       <div>
-        <div style={{
-          fontSize: 12,
-          fontWeight: 500,
-          textTransform: 'uppercase' as const,
-          letterSpacing: '0.1em',
-          color: 'var(--ctp-overlay1)',
-          marginBottom: 24,
-        }}>
-          实例状态
-        </div>
+        <SectionLabel>实例状态</SectionLabel>
 
         {loadingInstances ? (
           <div>
             {[1, 2, 3].map((n) => (
               <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '20px 0' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ctp-surface1)' }} />
+                <Skeleton width={8} height={8} />
                 <div>
-                  <div style={{ height: 14, width: 112, borderRadius: 4, background: 'var(--ctp-surface1)', marginBottom: 8 }} />
-                  <div style={{ height: 12, width: 176, borderRadius: 4, background: 'var(--ctp-surface1)' }} />
+                  <Skeleton width={112} height={14} />
+                  <div style={{ height: 8 }} />
+                  <Skeleton width={176} height={12} />
                 </div>
               </div>
             ))}
           </div>
         ) : instances.length === 0 ? (
-          <div style={{ padding: '64px 0', textAlign: 'center' as const }}>
-            <p style={{ fontSize: 14, color: 'var(--ctp-overlay1)' }}>暂无实例</p>
-            <p style={{ fontSize: 12, color: 'var(--ctp-overlay0)', marginTop: 8 }}>
-              前往「实例管理」添加 qBittorrent 实例
-            </p>
-          </div>
+          <EmptyState title="暂无实例" description="前往「实例管理」添加 qBittorrent 实例" />
         ) : (
-          <div>
+          <Panel padded>
             {instances.map((inst: any, idx: number) => (
               <div
                 key={inst.id}
@@ -233,8 +193,8 @@ export default function Dashboard() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '20px 0',
-                  borderBottom: idx < instances.length - 1 ? '1px solid var(--ctp-surface0)' : 'none',
+                  padding: '18px 0',
+                  borderBottom: idx < instances.length - 1 ? '1px solid var(--line-soft)' : 'none',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -243,12 +203,12 @@ export default function Dashboard() {
                     background: inst.status?.connected ? 'var(--ctp-green)' : 'var(--ctp-red)',
                   }} />
                   <div>
-                    <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--ctp-text)', lineHeight: 1.4 }}>
+                    <p style={{ fontSize: 14, fontWeight: 650, color: 'var(--text-primary)', lineHeight: 1.4 }}>
                       {inst.name}
                     </p>
                     <p style={{
-                      fontSize: 12, color: 'var(--ctp-overlay1)', marginTop: 4,
-                      fontFamily: '"Geist Mono", monospace',
+                      fontSize: 12, color: 'var(--text-muted)', marginTop: 4,
+                      fontFamily: 'var(--font-mono)',
                     }}>
                       {inst.url}
                     </p>
@@ -265,7 +225,7 @@ export default function Dashboard() {
                       <Download size={12} />
                       {formatSpeed(inst.status.dl_speed || 0)}
                     </span>
-                    <span style={{ fontSize: 13, color: 'var(--ctp-subtext0)' }}>
+                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                       {inst.status.total || 0} 种子
                     </span>
                   </div>
@@ -274,7 +234,7 @@ export default function Dashboard() {
                 )}
               </div>
             ))}
-          </div>
+          </Panel>
         )}
       </div>
     </div>

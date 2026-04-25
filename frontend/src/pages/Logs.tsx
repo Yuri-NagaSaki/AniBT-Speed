@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { statsApi } from '../api/client'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { PageHeader } from '../components/ui'
 
 const actionLabels: Record<string, { label: string; color: string }> = {
   add: { label: '添加', color: 'var(--ctp-teal)' },
@@ -27,36 +28,22 @@ export default function Logs() {
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 48 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--ctp-text)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>
-            操作日志
-          </h1>
-          <p style={{ fontSize: 14, color: 'var(--ctp-subtext0)', marginTop: 8, lineHeight: 1.6 }}>
-            查看系统自动管理操作记录
-          </p>
-        </div>
-        <select
-          value={filter || ''}
-          onChange={(e) => { setFilter(e.target.value || undefined); setPage(0) }}
-          style={{
-            padding: '12px 16px',
-            borderRadius: 10,
-            fontSize: 14,
-            background: 'var(--ctp-surface0)',
-            border: '1px solid var(--ctp-surface1)',
-            color: 'var(--ctp-text)',
-            outline: 'none',
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            transition: 'border-color 0.15s ease',
-          }}
-        >
-          <option value="">全部类型</option>
-          {Object.entries(actionLabels).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-        </select>
-      </div>
+      <PageHeader
+        title="操作日志"
+        description="查看系统自动管理操作记录"
+        kicker="Audit trail"
+        actions={(
+          <select
+            value={filter || ''}
+            onChange={(e) => { setFilter(e.target.value || undefined); setPage(0) }}
+            className="input"
+            style={{ width: 150, cursor: 'pointer' }}
+          >
+            <option value="">全部类型</option>
+            {Object.entries(actionLabels).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+        )}
+      />
 
       {/* Log List */}
       {isLoading ? (
