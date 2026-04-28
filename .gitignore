@@ -25,3 +25,6 @@ Thumbs.db
 # Docker
 *.log
 backend/ssh_keys/
+
+# Private deployment docs
+docs/
