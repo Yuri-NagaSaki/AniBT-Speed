@@ -316,15 +316,26 @@ bash test.sh
 
 在每台 qBittorrent 服务器上部署的独立代理，自动为已完成的种子生成 MediaInfo 并推送到 AniBT 站点展示。
 
-
-
 ### 特点
 
 - **本地运行**：直接在 qBT 服务器上运行，无需 SSH 远程执行
 - **info_hash 匹配**：通过种子 info_hash 自动匹配 Release，无需手动指定 releaseId
 - **自动重试**：推送失败的种子在下次检查周期自动重试
-- **路径映射**：支持 Docker qBT 容器路径到主机路径的映射（`PATH_MAPPING=/media:/hdd/media`）
-- **SQLite 记录**：已处理种子记录在 `~/.mediainfo-agent/processed.db`，避免重复处理
+- **路径映射**：支持 Docker qBT 容器路径到主机路径的映射，格式为 `容器内路径:主机路径`
+- **SQLite 记录**：已处理种子记录在 `/opt/mediainfo-agent/processed.db`，避免重复处理
+- **多实例**：每台做种服务器单独部署，共用同一个 Citrus API Token
+
+### 部署配置（`/opt/mediainfo-agent/.env`）
+
+```ini
+QBT_URL=http://localhost:8181
+QBT_USERNAME=admin
+QBT_PASSWORD=<qBittorrent WebUI 密码>
+CITRUS_URL=https://site.anibt.net
+CITRUS_TOKEN=<Convex MEDIAINFO_API_TOKEN 的值>
+PATH_MAPPING=<容器内路径>:<主机路径>   # Docker qBT 时需要，如 /downloads:/mnt/sdb/qbittorrent/downloads
+POLL_INTERVAL=120
+```
 
 ### 管理命令
 
