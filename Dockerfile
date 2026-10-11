@@ -1,38 +1,25 @@
-# Stage 1: build the Vite frontend
-FROM node:20-alpine AS frontend-builder
-
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-WORKDIR /build/frontend
-COPY frontend/package.json frontend/pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile 2>/dev/null || pnpm install
-
-COPY frontend/ ./
-RUN pnpm run build
-
-
-# Stage 2: run FastAPI and serve the built frontend from the same process
-FROM python:3.14-slim
-
+FROM python:3.14-slim AS build
+COPY --from=ghcr.io/astral-sh/uv:0.9.18 /uv /bin/uv
 WORKDIR /app
+COPY backend/pyproject.toml backend/uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
+COPY backend/app ./app
+RUN uv sync --frozen --no-dev --no-editable
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-
+FROM python:3.14-slim
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends mediainfo openssh-client \
+    && apt-get install -y --no-install-recommends ca-certificates mediainfo util-linux \
     && rm -rf /var/lib/apt/lists/*
-
-COPY backend/pyproject.toml ./
-RUN uv sync --frozen --no-dev --no-install-project 2>/dev/null \
-    || uv sync --no-dev --no-install-project
-
-COPY backend/ ./
-COPY --from=frontend-builder /build/frontend/dist /app/static
-
-RUN mkdir -p /app/data
-
-ENV FRONTEND_DIST=/app/static
-
-EXPOSE 6868
-
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "6868"]
+WORKDIR /app
+COPY --from=build /app/.venv /app/.venv
+COPY backend/app ./app
+ARG BUILD_REVISION=development
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    BUILD_REVISION=$BUILD_REVISION \
+    STATE_DIR=/app/data
+LABEL org.opencontainers.image.title="AniBT-Speed" \
+    org.opencontainers.image.revision=$BUILD_REVISION
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD ["python", "-m", "app", "status", "--live"]
+CMD ["python", "-m", "app", "run"]

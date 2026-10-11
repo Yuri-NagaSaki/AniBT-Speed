@@ -1,31 +1,34 @@
 services:
-  app:
-    image: ghcr.io/yuri-nagasaki/anibt-speed:latest
+  worker:
+    image: ${ANIBT_SPEED_IMAGE:-ghcr.io/yuri-nagasaki/anibt-speed:latest}
     build:
       context: .
-      dockerfile: Dockerfile
+      args:
+        BUILD_REVISION: ${BUILD_REVISION:-development}
     container_name: anibt-speed
+    init: true
+    env_file: worker.env
     environment:
-      - SECRET_KEY=${SECRET_KEY}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      - CORS_ORIGINS=${CORS_ORIGINS:-}
-      - CITRUS_API_URL=${CITRUS_API_URL:-}
-      - CITRUS_MEDIAINFO_TOKEN=${CITRUS_MEDIAINFO_TOKEN:-}
-      - TZ=Asia/Shanghai
+      STATE_DIR: /app/data
+    extra_hosts:
+      - host.docker.internal:host-gateway
     volumes:
-      - ./backend/data:/app/data
-      - ./backend/ssh_keys:/app/ssh_keys:ro
-    ports:
-      - "127.0.0.1:6868:6868"
+      - ./data:/app/data
+      - ${MEDIA_HOST_PATH:-/hdd/media}:${MEDIA_CONTAINER_PATH:-/media}:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 64
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 40s
     restart: unless-stopped
-
-  peerbanhelper:
-    image: ghostchu/peerbanhelper:latest
-    container_name: anibt-speed-pbh
-    environment:
-      - TZ=Asia/Shanghai
-    ports:
-      - "127.0.0.1:9898:9898"
-    volumes:
-      - ./peerbanhelper/data:/app/data
-    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

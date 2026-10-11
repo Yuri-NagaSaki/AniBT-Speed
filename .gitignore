@@ -1,5 +1,10 @@
 # Environment
 .env
+worker.env
+data/
+backups/
+backend/.venv/
+.ruff_cache/
 *.pyc
 __pycache__/
 *.pyo
