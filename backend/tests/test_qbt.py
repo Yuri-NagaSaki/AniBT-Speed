@@ -116,3 +116,23 @@ class QBTTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([path for path, _ in calls], ["/api/v2/torrents/stop", "/api/v2/torrents/start"])
         self.assertIn(b"%7C", calls[0][1])
         await client.close()
+
+    async def test_qb_52_structured_add_acknowledgement(self):
+        command = Command(
+            "add", (HASH,), values={"save_path": "/media/AniBT", "tags": "AniBT", "url": "magnet:?xt=urn:btih:" + HASH}
+        )
+        replies = [
+            {"success_count": 1, "failure_count": 0, "pending_count": 0, "added_torrent_ids": [HASH]},
+            {"success_count": 0, "failure_count": 0, "pending_count": 1, "added_torrent_ids": []},
+            {"success_count": 1, "failure_count": 0, "pending_count": 0, "added_torrent_ids": ["b" * 40]},
+            {"success_count": 0, "failure_count": 1, "pending_count": 0, "added_torrent_ids": []},
+        ]
+        client = QBTClient(
+            settings(), transport=httpx.MockTransport(lambda _: httpx.Response(200, json=replies.pop(0)))
+        )
+        self.addAsyncCleanup(client.close)
+        await client.execute(command)
+        await client.execute(command)
+        for _ in range(2):
+            with self.assertRaises(QBTError):
+                await client.execute(command)

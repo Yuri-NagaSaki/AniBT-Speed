@@ -38,7 +38,7 @@ AniBT-Speed 是 AniBT 的下载、做种与媒体信息 Worker。单个进程管
 
 ## 部署
 
-需要 Docker Compose、qBittorrent 5.2 或更高版本，以及与 qB 保存路径一致的只读媒体卷。
+需要 Docker Compose、qBittorrent 5.2.4 或更高版本，以及与 qB 保存路径一致的只读媒体卷。添加种子使用新版的结构化确认响应。
 
 1. 复制配置：`cp worker.env.example worker.env`。
 2. 填写 `QBT_URL`、`QBT_API_KEY` 与 AniBT 设置，并执行 `chmod 600 worker.env`。

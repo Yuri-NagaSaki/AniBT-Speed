@@ -143,8 +143,19 @@ class QBTClient:
                 else:
                     kwargs = {"data": {**fields, "urls": command.values["url"]}}
                 body = await self.request("POST", "torrents/add", **kwargs)
-                if body.strip() != b"Ok.":
-                    raise QBTError("qB torrents/add: torrent was not accepted")
+                try:
+                    acknowledgement = json.loads(body)
+                    accepted = acknowledgement.get("failure_count", 0) == 0 and (
+                        acknowledgement.get("pending_count", 0) > 0
+                        or (
+                            acknowledgement.get("success_count", 0) > 0
+                            and bool(set(command.hashes).intersection(acknowledgement.get("added_torrent_ids", [])))
+                        )
+                    )
+                except ValueError, TypeError, AttributeError:
+                    raise QBTError("qB torrents/add: invalid structured acknowledgement") from None
+                if not accepted:
+                    raise QBTError("qB torrents/add: expected torrent was not accepted")
             case _:
                 raise ValueError(f"Unknown command: {command.kind}")
 
