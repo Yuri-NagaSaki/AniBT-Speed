@@ -91,12 +91,11 @@ class Store:
         if not groups:
             raise ValueError("An empty group response cannot disable subscriptions")
         with self.connection() as db:
-            imported = db.execute("SELECT 1 FROM meta WHERE key='history_imported'").fetchone() is not None
             db.execute("UPDATE feeds SET enabled=0")
             for slug, name in groups.items():
                 db.execute(
                     "INSERT INTO feeds(slug,name,enabled,initialized) VALUES (?,?,?,?) ON CONFLICT(slug) DO UPDATE SET name=excluded.name,enabled=excluded.enabled",
-                    (slug, name, slug not in excluded, imported),
+                    (slug, name, slug not in excluded, 0),
                 )
 
     def feeds(self) -> list[dict]:

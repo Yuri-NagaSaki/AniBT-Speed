@@ -3,6 +3,7 @@
 import sqlite3
 import time
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from app.feeds import canonical_key
 from app.store import Store
@@ -20,7 +21,15 @@ def import_receipts(store: Store, rss_history: Path | None, media_history: Path 
                             counts["release_receipts"] += target.execute(
                                 "INSERT OR IGNORE INTO seen_keys VALUES (?,'imported')", (canonical_key(value),)
                             ).rowcount
-                target.execute("INSERT OR REPLACE INTO meta VALUES ('history_imported','true')")
+                if source.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='rss_feeds'").fetchone():
+                    for name, url in source.execute("SELECT name,url FROM rss_feeds"):
+                        path = urlsplit(url).path
+                        if path.startswith("/rss/group/") and path.endswith(".xml"):
+                            slug = path.removeprefix("/rss/group/").removesuffix(".xml")
+                            target.execute(
+                                "INSERT OR IGNORE INTO feeds(slug,name,enabled,initialized) VALUES (?,?,0,1)",
+                                (slug, name),
+                            )
             finally:
                 source.close()
         if media_history:

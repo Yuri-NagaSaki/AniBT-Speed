@@ -40,6 +40,17 @@ class StoreTests(StoreCase):
             self.store.synchronize_feeds({}, frozenset())
         self.assertEqual([feed["slug"] for feed in self.store.feeds()], ["allowed"])
 
+    def test_migrated_feeds_keep_history_but_future_feeds_still_bootstrap(self):
+        source = Path(self.temp.name) / "history.db"
+        with sqlite3.connect(source) as db:
+            db.executescript(
+                "CREATE TABLE rss_processed_items(guid TEXT,link TEXT); CREATE TABLE rss_feeds(name TEXT,url TEXT)"
+            )
+            db.execute("INSERT INTO rss_feeds VALUES ('Known','https://anibt.net/rss/group/known.xml')")
+        import_receipts(self.store, source, None)
+        self.store.synchronize_feeds({"known": "Known", "new": "New"}, frozenset())
+        self.assertEqual({feed["slug"]: feed["initialized"] for feed in self.store.feeds()}, {"known": 1, "new": 0})
+
     def test_bootstrap_is_persisted_per_feed_not_per_process(self):
         self.release()
         self.assertEqual(self.store.feeds()[0]["initialized"], 1)
