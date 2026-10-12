@@ -3,6 +3,7 @@ package anibt
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -150,7 +151,9 @@ func TestNotificationRetries429AcrossRestart(t *testing.T) {
 	defer server.Close()
 	n := NewNotifier(c, s)
 	n.base = server.URL
-	must(t, n.Step(ctx))
+	if e := n.Step(ctx); e == nil {
+		t.Fatal("429 did not back off notification lane")
+	}
 	if count(t, s, "SELECT count(*) FROM receipts WHERE kind='summary'") != 0 || count(t, s, "SELECT count(*) FROM tasks WHERE attempts=1 AND due>=?", time.Now().Add(115*time.Second).Unix()) != 1 {
 		t.Fatal("429 dropped task or marked summary delivered")
 	}
@@ -235,5 +238,71 @@ func TestSourceXMLUsesExactGroupIdentity(t *testing.T) {
 	must(t, e)
 	if entries[0].Reject != "group identity mismatch" {
 		t.Fatal(entries)
+	}
+}
+
+func TestReducedMediaSampleLimitCompletesExistingProgress(t *testing.T) {
+	c := testConfig(t)
+	c.MediaSamples = 1
+	s := testStore(t)
+	ctx := t.Context()
+	tracks := Tracks{General: map[string]any{"format": "Matroska", "duration": 1}, Video: []map[string]any{{"format": "HEVC"}}}
+	w := MediaWork{Hash: "h", Files: []File{{Name: "1.mkv", Size: 1, Progress: 1}, {Name: "2.mkv", Size: 2, Progress: 1}}, Samples: map[string]Tracks{"1.mkv": tracks, "2.mkv": tracks}}
+	must(t, s.Enqueue(ctx, "media", "h", "extract", "torrent:h", w))
+	m := NewMedia(c, s)
+	m.extract = func(context.Context, Config, string, File) (Tracks, error) {
+		t.Fatal("already complete sample read twice")
+		return Tracks{}, nil
+	}
+	must(t, m.Step(ctx))
+	if count(t, s, "SELECT count(*) FROM tasks WHERE phase='upload'") != 1 {
+		t.Fatal("config change trapped completed samples")
+	}
+}
+func TestMediaPathCorrectionFencesReaderAndKeepsOwnership(t *testing.T) {
+	c := testConfig(t)
+	s := testStore(t)
+	ctx := t.Context()
+	h := strings.Repeat("b", 40)
+	old := Torrent{Hash: h, Name: "name", Category: c.Category, SavePath: c.QBTRoot + "/old", ContentPath: c.QBTRoot + "/old/file", State: "stoppedUP", Progress: 1}
+	snap := Snapshot{At: time.Now().Unix(), Torrents: map[string]Torrent{h: old}}
+	_, e := s.Observe(ctx, snap, nil, c)
+	must(t, e)
+	m := claim(t, s, "media", "manifest")
+	must(t, s.Transition(ctx, m, "extract", m.Resource, MediaWork{Hash: h, SavePath: old.SavePath, Files: []File{{Name: "file.mkv", Size: 1, Progress: 1}}}, 0))
+	active := claim(t, s, "media", "extract")
+	newTorrent := old
+	newTorrent.SavePath = c.QBTRoot + "/new"
+	snap.Torrents = map[string]Torrent{h: newTorrent}
+	_, e = s.Observe(ctx, snap, map[string]Torrent{h: old}, c)
+	must(t, e)
+	if e = s.Transition(ctx, active, "upload", active.Resource, MediaWork{}, 0); !errors.Is(e, ErrStale) {
+		t.Fatal("old path result accepted", e)
+	}
+	must(t, s.Enqueue(ctx, "cleanup", h, "ready", "torrent:"+h, CleanupWork{Hash: h}))
+	del, e := s.Claim(ctx, "cleanup", []string{"ready"}, time.Minute)
+	must(t, e)
+	if del != nil {
+		t.Fatal("invalidated reader resource released too early")
+	}
+	if count(t, s, "SELECT count(*) FROM tasks WHERE lane='media' AND phase='manifest' AND json_extract(data,'$.save_path')=?", newTorrent.SavePath) != 1 {
+		t.Fatal("new path not queued")
+	}
+}
+
+func TestMediaDependencyOutageDoesNotConsumeItemAttempts(t *testing.T) {
+	c := testConfig(t)
+	s := testStore(t)
+	ctx := t.Context()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(503) }))
+	defer server.Close()
+	c.APIRoot = server.URL
+	must(t, s.Enqueue(ctx, "media", "h", "upload", "torrent:h", MediaWork{Hash: "h", Payload: json.RawMessage(`{"infoHash":"h"}`)}))
+	m := NewMedia(c, s)
+	if e := m.Step(ctx); e == nil {
+		t.Fatal("dependency outage did not back off lane")
+	}
+	if count(t, s, "SELECT count(*) FROM tasks WHERE attempts=0 AND error<>'' AND token='' AND due>0") != 1 {
+		t.Fatal("dependency outage exhausted item retries")
 	}
 }

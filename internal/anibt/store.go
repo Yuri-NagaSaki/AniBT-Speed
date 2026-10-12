@@ -207,6 +207,24 @@ func (s *Store) Transition(ctx context.Context, t Task, phase, resource string, 
 		return releaseOwner(ctx, tx, t)
 	})
 }
+
+// DeferDependency releases a claim without spending an item's retry allowance.
+// Credentials, rate limits and upstream outages belong to the dependency lane.
+func (s *Store) DeferDependency(ctx context.Context, t Task, cause error, delay time.Duration) error {
+	return s.tx(ctx, func(tx *sql.Tx) error {
+		if e := claimValid(ctx, tx, t); e != nil {
+			return e
+		}
+		message := cause.Error()
+		if len(message) > 300 {
+			message = message[:300]
+		}
+		if _, e := tx.ExecContext(ctx, "UPDATE tasks SET due=?,updated=?,error=?,token='',lease=0 WHERE id=?", time.Now().Add(max(delay, time.Minute)).Unix(), time.Now().Unix(), message, t.ID); e != nil {
+			return e
+		}
+		return releaseOwner(ctx, tx, t)
+	})
+}
 func (s *Store) Retry(ctx context.Context, t Task, cause error, minimum time.Duration) error {
 	return s.tx(ctx, func(tx *sql.Tx) error {
 		if e := claimValid(ctx, tx, t); e != nil {

@@ -259,8 +259,9 @@ func (c *Controller) rate(ctx context.Context, snap Snapshot) ([]Command, error)
 }
 
 type CleanupWork struct {
-	Hash      string `json:"hash"`
-	Requested int64  `json:"requested"`
+	Submissions int    `json:"submissions"`
+	Hash        string `json:"hash"`
+	Requested   int64  `json:"requested"`
 }
 
 func (c *Controller) cleanup(ctx context.Context, snap Snapshot) (bool, error) {
@@ -310,7 +311,13 @@ func (c *Controller) cleanup(ctx context.Context, snap Snapshot) (bool, error) {
 			return itemFail(fmt.Errorf("cleanup ownership proof: file size mismatch"))
 		}
 	}
-	w := CleanupWork{Hash: t.Key, Requested: time.Now().Unix()}
+	var w CleanupWork
+	if e = json.Unmarshal(t.Data, &w); e != nil {
+		return itemFail(fmt.Errorf("invalid cleanup work"))
+	}
+	w.Hash = t.Key
+	w.Requested = time.Now().Unix()
+	w.Submissions++
 	if e = c.s.Transition(ctx, *t, "verifying", t.Resource, w, 0); e != nil {
 		return true, e
 	}

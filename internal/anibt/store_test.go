@@ -244,3 +244,27 @@ func TestMaxSubmissionAttemptsBlock(t *testing.T) {
 		t.Fatal("submission retries unbounded")
 	}
 }
+
+func TestOperatorReplayKeepsPermanentContentReceipt(t *testing.T) {
+	s := testStore(t)
+	c := testConfig(t)
+	ctx := t.Context()
+	hash := fmt.Sprintf("%040x", 1)
+	must(t, s.SyncFeeds(ctx, map[string]string{"g": "Group"}, c))
+	d := Download{Key: "release", Slug: "g", Title: "release", URL: "magnet:old"}
+	must(t, s.Ingest(ctx, Feed{Slug: "g"}, []Entry{{Download: d}}, "", "", false))
+	task := claim(t, s, "download", "pending")
+	d.Hash = hash
+	must(t, s.Ready(ctx, task, d))
+	task = claim(t, s, "download", "ready")
+	must(t, s.Finish(ctx, task, "content", hash, "completed", ""))
+	must(t, s.Operate(ctx, "replay", d.Key))
+	pending := claim(t, s, "download", "pending")
+	must(t, s.Ready(ctx, pending, d))
+	if count(t, s, "SELECT count(*) FROM receipts WHERE kind='content' AND key=?", hash) != 1 || count(t, s, "SELECT count(*) FROM tasks WHERE phase='ready'") != 1 {
+		t.Fatal("replay removed permanent receipt or failed to permit explicit work")
+	}
+	if count(t, s, "SELECT count(*) FROM meta WHERE key=?", "replay:"+d.Key) != 0 {
+		t.Fatal("replay permission not consumed")
+	}
+}

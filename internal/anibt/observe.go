@@ -67,6 +67,12 @@ func (s *Store) Observe(ctx context.Context, snap Snapshot, previous map[string]
 					if e := putTask(ctx, tx, "media", h, "manifest", "torrent:"+h, MediaWork{Hash: h, Name: t.Name, SavePath: t.SavePath}, snap.At); e != nil {
 						return e
 					}
+					// Invalidate path-dependent samples, but retain the old resource
+					// owner until its lease expires so an in-flight reader drains.
+					if _, e := tx.ExecContext(ctx, `UPDATE tasks SET phase='manifest',data=?,revision=revision+1,attempts=0,due=0,error='',token='',lease=0,updated=? WHERE id=? AND phase IN ('manifest','extract','blocked') AND (json_extract(data,'$.save_path')<>? OR (? AND phase='blocked' AND json_extract(data,'$.payload') IS NULL))`, encode(MediaWork{Hash: h, Name: t.Name, SavePath: t.SavePath}), snap.At, "media:"+h, t.SavePath, known && !old.Complete()); e != nil {
+						return e
+					}
+
 				}
 			}
 		}

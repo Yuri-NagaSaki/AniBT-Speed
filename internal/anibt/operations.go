@@ -90,11 +90,15 @@ func (s *Store) Operate(ctx context.Context, action, key string) error {
 					return fmt.Errorf("invalid media task")
 				}
 				phase = "manifest"
-				if len(m.Files) > 0 {
-					phase = "extract"
-				}
+
 				if len(m.Payload) > 0 {
 					phase = "upload"
+				} else {
+					m.Files = nil
+					m.Samples = nil
+					if _, e := tx.ExecContext(ctx, "UPDATE tasks SET data=? WHERE id=?", encode(m), key); e != nil {
+						return e
+					}
 				}
 			case "cleanup":
 				phase = "ready"

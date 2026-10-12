@@ -128,6 +128,7 @@ func (w *Worker) loop(ctx context.Context, wg *sync.WaitGroup, name string, inte
 			delay := max(time.Second, interval-time.Since(started))
 			if e != nil {
 				delay = min(5*time.Minute, interval*time.Duration(1<<min(st.Consecutive, 8)))
+				delay = max(delay, retryDelay(e))
 				slog.Warn("lane deferred", "lane", name, "error", e)
 			}
 			timer := time.NewTimer(delay)

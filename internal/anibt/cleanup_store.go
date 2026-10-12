@@ -39,7 +39,7 @@ func (c *Controller) reconcileCleanup(ctx context.Context, snap Snapshot) error 
 		e = c.s.tx(ctx, func(tx *sql.Tx) error {
 			if exists {
 				phase := "ready"
-				if t.Attempts+1 >= c.c.MaxAttempts {
+				if w.Submissions >= c.c.MaxAttempts {
 					phase = "blocked"
 					if e := c.s.event(ctx, tx, "blocked:"+t.ID+":"+fmt.Sprint(t.Revision), "blocked", "AniBT 清理未被 qB 确认，已暂停重试："+t.Key, snap.At); e != nil {
 						return e

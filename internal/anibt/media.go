@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -141,6 +142,12 @@ func (m *Media) Step(ctx context.Context) error {
 	}
 	e = m.one(ctx, *t)
 	if e != nil {
+		var httpErr *HTTPError
+		itemRejection := errors.As(e, &httpErr) && (httpErr.Status == 404 || httpErr.Status == 422 || httpErr.Status == 400)
+		if t.Phase == "upload" && !itemRejection {
+			settle(func(cx context.Context) error { return m.s.DeferDependency(cx, *t, e, retryDelay(e)) })
+			return e
+		}
 		settle(func(cx context.Context) error { return m.s.Retry(cx, *t, e, retryDelay(e)) })
 	}
 	return nil
@@ -171,6 +178,15 @@ func (m *Media) one(ctx context.Context, t Task) error {
 	}
 	if w.Samples == nil {
 		w.Samples = map[string]Tracks{}
+	}
+	selected := map[string]bool{}
+	for _, f := range samples {
+		selected[f.Name] = true
+	}
+	for name := range w.Samples {
+		if !selected[name] {
+			delete(w.Samples, name)
+		}
 	}
 	for _, f := range samples {
 		if _, done := w.Samples[f.Name]; done {

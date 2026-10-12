@@ -34,6 +34,7 @@ func (n *Notifier) Step(ctx context.Context) error {
 	e = n.one(ctx, *t)
 	if e != nil {
 		settle(func(cx context.Context) error { return n.s.Retry(cx, *t, e, retryDelay(e)) })
+		return e
 	}
 	return nil
 }

@@ -68,6 +68,19 @@ class DeploymentTest(unittest.TestCase):
         self.assertEqual((self.root/'current').resolve(), self.old)
         self.assertEqual(self.unit.read_text(), 'old unit')
 
+    def test_late_activation_is_detected_after_service_stops(self):
+        candidate, manifest = self.deploy.stage(self.artifact, self.config)
+        backup = self.deploy.checkpoint(self.old, candidate, manifest['revision'])
+        original = self.deploy.run
+        def run(*args, check=True):
+            if args == ('systemctl', 'stop', 'anibt.service'):
+                (self.state/('effects-'+manifest['revision'])).write_text('late activation')
+                (self.state/'state.sqlite3').write_bytes(b'late external receipt')
+            return original(*args, check=check)
+        self.deploy.run = run
+        self.deploy.restore(backup)
+        self.assertEqual((self.state/'state.sqlite3').read_bytes(), b'late external receipt')
+
     def test_bad_config_never_stops_existing_service(self):
         self.deploy.binary = Mock(side_effect=RuntimeError('invalid new config'))
         with self.assertRaises(RuntimeError):

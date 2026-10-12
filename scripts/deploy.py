@@ -106,11 +106,18 @@ class Deployment:
         (backup/'deployment.json').write_text(json.dumps(meta, indent=2))
         return backup
 
+    def stop_service(self):
+        self.run('systemctl', 'stop', 'anibt.service', check=False)
+        active = self.run('systemctl', 'is-active', '--quiet', 'anibt.service', check=False)
+        if active.returncode == 0:
+            raise RuntimeError('service did not stop; state replacement refused')
+
     def restore(self, backup):
         meta = json.loads((backup/'deployment.json').read_text())
         previous = Path(meta['previous']) if meta['previous'] else None
+        self.stop_service()
+        # Activation can race the health timeout. Inspect only after stop drains it.
         effects = (self.state/('effects-'+meta['revision'])).exists()
-        self.run('systemctl', 'stop', 'anibt.service', check=False)
         if effects:
             if not previous:
                 raise RuntimeError('activation occurred; keep native state and repair forward; automatic Docker rollback is forbidden')
@@ -163,10 +170,7 @@ class Deployment:
         candidate, manifest = self.stage(artifact, config)
         revision = manifest['revision']
         previous = self.current.resolve() if self.current.is_symlink() else None
-        self.run('systemctl', 'stop', 'anibt.service', check=False)
-        active = self.run('systemctl', 'is-active', '--quiet', 'anibt.service', check=False)
-        if active.returncode == 0:
-            raise RuntimeError('old service did not stop; version switch refused')
+        self.stop_service()
         try:
             backup = self.checkpoint(previous, candidate, revision)
         except BaseException:
