@@ -1,35 +1,14 @@
-# Environment
 .env
 worker.env
+anibt.env
 data/
 backups/
-backend/.venv/
-.ruff_cache/
-*.pyc
+dist/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.log
 __pycache__/
-*.pyo
-
-# Data
-backend/data/*.db
-peerbanhelper/data/
-
-# Node
-frontend/node_modules/
-frontend/dist/
-
-# IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-
-# OS
 .DS_Store
-Thumbs.db
-
-# Docker
-*.log
-backend/ssh_keys/
-
-# Private deployment docs
-docs/

@@ -1,94 +1,106 @@
-# AniBT-Speed
+# AniBT
 
-AniBT-Speed 是 AniBT 的下载、做种与媒体信息 Worker。单个进程管理一个 qBittorrent 实例，通过 API Key 访问 qB，订阅 AniBT 字幕组 RSS，并将完成种子的 MediaInfo 推送到 AniBT。
+AniBT 是从 AniBT 发布目录订阅资源、管理 qBittorrent 下载与做种、回传 MediaInfo、发送 Telegram 通知的原生 Worker。没有前端、HTTP 服务或监听端口；运行时由 systemd 管理，无需 Docker、Python 或 Node.js。
 
-版本 1.0 完全移除了 Web 前端、HTTP 服务、多实例面板和旧调度器。进程不监听端口。运行状态写入本地文件，通过命令行读取。
+运行依赖：Linux、systemd 252+、`mediainfo`、`util-linux`、`coreutils`、系统 CA 证书。qBittorrent 使用支持结构化添加回执的 5.2 系列，仅通过 API key 认证。Worker 与 qB 可以采用不同的部署方式。
 
-## 调度设计
+## 发布到完成
 
-| 工作循环 | 职责 | 负载限制 |
-| --- | --- | --- |
-| 控制 | 增量读取 qB 状态、记录流量、规划队列与清理、提交下载、读取媒体文件清单 | 每 30 秒一轮，20 秒预算，每轮最多 8 个后续 qB 操作 |
-| 订阅 | 同步字幕组目录、并发抓取 RSS、保存下载意图 | 每 5 分钟，最多 3 个并发请求，每轮有截止时间 |
-| 下载准备 | 获取种子文件、计算原始 info 字典的哈希、确定保存目录 | 每轮最多 4 个条目；失败持久退避 |
-| 媒体信息 | 从只读下载卷采样、执行 MediaInfo、推送 AniBT | 单并发；默认最多 6 个样本，每个进程 25 秒、256 MiB 地址空间上限 |
+1. 定期更新字幕组目录，按组拉取 RSS。首次订阅只登记历史，之后使用 ETag/Last-Modified 条件请求。默认排除 `kirara-fantasia,ani,zzz123,pre-s,silent-workshop`，可通过配置调整。
+2. 发布进入持久准备队列。验证来源身份、发布时间、季度接口与种子元数据，计算真实 infohash。源修正会撤销旧准备结果；已提交的操作先确认旧哈希。
+3. 控制器读取 qB 增量快照，执行有限数量的队列、下载、清理和文件清单操作。空间不足时暂停新下载。添加请求先记为待确认，再按快照确认入队；分别记录下载完成、停滞、文件丢失和任务消失。
+4. 已完成内容进入媒体队列。每次只读取一个样本，保存进度后让出执行机会；进程有超时、内存、输出和 I/O 限制。处理结果独立重试上传。集合时长只在全部媒体文件都分析完成时求和。
+5. 做种池优先保护实际需求、近期完成和人工强制状态。冷种按上次暴露时间公平轮转，目标数量是软上限。
+6. 回收仅处理已完成、超过保护时间、无下载者且归属明确的种子。删除前刷新 qB 状态，检查共享目录、文件清单、实际大小与安全路径；媒体领取与删除互斥。删除后等下一份快照确认。
+7. 业务变化与 Telegram 发件箱同事务落库。429 遵守 `retry_after`，超时与重启后继续重试；每日摘要送达后才记完成。Telegram 不提供幂等发送键，因此响应丢失时可能重复通知，采用至少一次投递。
 
-只有控制循环访问 qB。每轮调用一次 `/api/v2/sync/maindata`，后续使用 `rid` 获取变化；所有策略共享同一份快照。qB 不可用时停止本轮写操作，并按指数退避重试。请求不会自动降级为 HTTP、探测账号或重复提交。
+新下载路径：`QBT_DOWNLOAD_ROOT/<字幕组>/<季度>/<番剧>/<infohash>/...`。`ktnbytes` 使用 `<字幕组>/合集/<infohash>/...`。qB 分类保留 `AniBT`，字幕组进入标签。已有文件不会被迁移或改名。
 
-每个循环最多执行一轮，不积累补跑队列。RSS、媒体信息和通知不会占住控制循环。SQLite 使用 WAL，网络请求与子进程均在数据库事务之外执行。数据库操作放到线程执行，避免阻塞异步调度。
+## 配置
 
-## 下载与做种规则
+复制 [anibt.env.example](anibt.env.example) 并填写凭证。配置文件只接受 `ANIBT_*`，未知项直接报错；没有旧参数别名。环境变量可覆盖文件值。配置文件应为 `0600`，不要提交到仓库。
 
-- 默认排除 `kirara-fantasia`、`ani`、`zzz123`、`pre-s`、`silent-workshop`。通过 `ANIBT_EXCLUDED_GROUP_SLUGS` 修改；配置为空表示不排除字幕组。排除只影响新订阅和新下载，不自动删除已有种子。
-- 发布 ID 与精确种子哈希用于去重；标题不参与身份判断。添加请求返回成功后，还必须在后续快照中观察到目标哈希，才记为下载已确认。超时产生的模糊结果先等待确认，再退避重试。
-- 新订阅首次启动时可标记现有条目为历史；该状态持久保存，重启不会重新吞掉停机期间的新发布。每次检查完整的 RSS 返回窗口，不只截取前 5 项。超过窗口或超过 `RSS_MAX_AGE_HOURS` 的停机积压不保证补全。
-- 新下载使用 `{DOWNLOAD_ROOT}/{字幕组}/{季度}/{番剧}/{infohash}`；`ktnbytes` 使用 `{字幕组}/合集/{infohash}`。独立哈希目录防止不同种子共用文件。已有种子的路径保持不动。
-- 做种池默认目标为 300 个。实际上传、有下载者、完成后的热窗口和人工强制做种受到保护，因此这是软上限。空闲种子按持久保存的最近暴露时间轮转，每次默认 10 个，间隔至少 3 分钟，每个新暴露时段至少 10 分钟。
-- 自动管理仅作用于指定分类、下载根目录内且无排除标签的种子。清理只处理已完成、已知完成时间、没有当前需求的种子；强制状态、缺文件状态及共享或嵌套内容路径受到保护。
-- 空间不足时每轮先删除一个符合条件的种子，下轮重新观察真实空闲容量。保留期默认 90 天，设置 `RETAIN_DAYS=0` 关闭按年龄清理。已移除旧的标题关键词删除规则。
-- 流量使用 qB 的累计字节计数差值，不再将瞬时速度乘以固定分钟数。计数重置不会产生负流量。
+| 设置 | 含义 |
+| --- | --- |
+| `ANIBT_QBT_URL` / `ANIBT_QBT_API_KEY` | 直连 qB 的地址与 API key |
+| `ANIBT_API_URL` / `ANIBT_API_TOKEN` | AniBT 来源与 MediaInfo 上传凭证 |
+| `ANIBT_QBT_DOWNLOAD_ROOT` | qB 所见保存目录，生产为 `/media/AniBT` |
+| `ANIBT_MEDIA_ROOT` | 同一目录在宿主机的位置，生产为 `/hdd/media/AniBT` |
+| `ANIBT_STATE_DIR` | 本机持久状态目录，默认 `/var/lib/anibt` |
+| `ANIBT_CONTROL_INTERVAL` / `ANIBT_CONTROL_BUDGET` | 控制间隔与每轮时限，默认 `30s` / `20s` |
+| `ANIBT_CONTROL_COMMANDS` | 一轮初始快照之后的 qB HTTP 调用上限；开启清理时至少 5 |
+| `ANIBT_POOL_TARGET` | 做种池软目标，默认 300 |
+| `ANIBT_RETAIN_DAYS` | 默认 90 天；0 关闭按年龄回收 |
+| `ANIBT_MEDIA_SAMPLES` | 媒体采样数，默认 6，范围 1–20 |
+| `ANIBT_MAX_ATTEMPTS` | 单任务连续失败上限，默认 12；达到后进入 `blocked`，Telegram 持续重试 |
+| `ANIBT_TELEGRAM_ENABLED` / `ANIBT_TELEGRAM_TOKEN` / `ANIBT_TELEGRAM_CHAT_ID` | Telegram 开关、Bot token 和接收者 |
 
-## 集成媒体信息
+时间参数使用 `30s`、`5m`、`12h` 等带单位格式。容量使用 GiB，速率使用 MiB/s。完整默认值以示例文件为准。
 
-控制循环发现完成种子后，只读取尚未处理种子的文件清单。采集循环使用同一下载路径的只读挂载，不再独立轮询 qB 或通过 SSH 执行命令。
+## 构建与部署
 
-每个样本只执行一次 JSON 采集，并从结构化结果生成可读文本。合集包含文件清单与采样范围；没有解析全部媒体文件时，不推算总时长。采集使用低 CPU 与磁盘优先级，I/O 压力超过阈值时暂缓新采集。已生成的推送内容持久保存，网络重试不重复读盘。
-
-设置 `MEDIAINFO_ENABLED=true` 和 `ANIBT_API_TOKEN` 后启用。Token 必须由 AniBT 媒体信息接收端授权。接口为 `PUT {ANIBT_API_URL}/api/releases/mediainfo`。
-
-## 部署
-
-需要 Docker Compose、qBittorrent 5.2.4 或更高版本，以及与 qB 保存路径一致的只读媒体卷。添加种子使用新版的结构化确认响应。
-
-1. 复制配置：`cp worker.env.example worker.env`。
-2. 填写 `QBT_URL`、`QBT_API_KEY` 与 AniBT 设置，并执行 `chmod 600 worker.env`。
-3. 确认 Compose 媒体卷。默认将宿主机 `/hdd/media` 只读挂载到 `/media`。可通过部署环境变量 `MEDIA_HOST_PATH`、`MEDIA_CONTAINER_PATH` 调整。
-4. 运行 `./deploy.sh`。本地构建使用 `BUILD_LOCAL=1 ./deploy.sh`。
-5. 执行 `docker exec anibt-speed python -m app status`，确认控制循环成功时间、各队列状态与镜像修订号。
-
-同机 qB 建议直接访问 `http://host.docker.internal:8181`，避免经过公网反向代理。实际端口以 qB 配置为准。AniBT-Speed 不发布任何端口。
-
-部署脚本在构建完成后停止旧 Worker，并通过 SQLite backup API 保存状态。新镜像启动失败时恢复旧镜像；备份存放于 `backups/`。版本 1.0 的首次迁移必须按下节操作，不能用旧参数直接启动。
-
-## 一次性迁移
-
-新版没有旧配置别名、旧数据库双写或旧 Agent 调用链。旧运行数据只通过显式导入命令读取。
-
-1. 备份旧 AniBT-Speed 配置与 SQLite，并备份旧媒体采集程序、systemd 单元、配置和成功记录库。
-2. 停止旧 Worker 和独立媒体采集服务，确保没有重复控制与采集。
-3. 挂载只读备份目录，运行 `python -m app migrate --rss-history /backup/anibt_speed.db --media-history /backup/processed.db`。命令可重复执行；只导入发布处理凭证与成功的媒体推送记录。
-4. 使用全新的 `worker.env` 启动 Worker，检查 `status` 和日志，并验证一次真实采集与推送。
-5. 验证后禁用并移除旧媒体采集 systemd 单元及程序目录。保留备份用于回滚。
-
-旧的失败次数和永久跳过记录不会迁入新媒体队列。失败条目按新策略重新尝试。
-
-## 运维
-
-```bash
-docker exec anibt-speed python -m app status
-docker exec anibt-speed python -m app status --live
-docker logs --since 10m anibt-speed
-docker exec anibt-speed python -m app inspect
-```
-
-`status` 在依赖故障或控制状态过期时返回非零值。`status --live` 只检查进程心跳，用于容器健康检查，避免 qB 暂时不可用导致重启风暴。两者均读取状态文件，不发起 qB 请求。
-
-`inspect` 执行一次只读 qB 增量协议检查。`inspect --output /app/data/snapshot.json` 可保存本机诊断快照，文件包含种子路径和名称，应作为私有运维资料保管。
-
-`DRY_RUN=true` 禁止 qB 写操作和媒体推送；旁路验证应使用独立 `STATE_DIR`。同一状态目录有进程锁，拒绝启动第二个 Worker。SIGTERM 会取消当前网络请求、终止媒体子进程并写入停止状态。
-
-完整设置及默认值见 [配置定义](backend/app/config.py)。未知的 `worker.env` 配置键会在启动时报错，防止旧参数被悄悄忽略。
-
-## 开发与验证
+构建需要 [go.mod](go.mod) 指定的 Go 工具链；构建和部署脚本额外需要 Python 3。
 
 ```bash
 ./test.sh
-docker build -t anibt-speed:test .
-uv run --directory backend python benchmarks/runtime.py --samples 3 --output /tmp/anibt-qbt-benchmark.json
+./scripts/build.sh amd64
+./scripts/build.sh arm64
 ```
 
-Python 3.14；依赖版本锁定在 `backend/uv.lock`。测试覆盖超时与取消、单写入者、增量合并、下载确认与去重、重启恢复、队列公平轮转、清理保护和媒体推送重试。CI 通过后构建 amd64 与 arm64 镜像。
+`dist/linux-<架构>/` 包含静态 Worker、systemd 模板、版本清单和 SHA256SUMS。先在目标主机安装运行依赖，再以 root 执行：
 
-基准脚本只读访问 qB，交替比较完整列表与增量同步，单独记录首次完整同步开销。它测量接口传输与解析，不代表整机磁盘吞吐或 BT 上传速率的提升；遇到请求失败立即结束采样。
+```bash
+apt-get install mediainfo util-linux coreutils ca-certificates
+python3 scripts/deploy.py apply dist/linux-amd64 --config /root/anibt.env
+```
 
-MIT License。
+安装位置为 `/opt/anibt/releases/<revision>`，`/opt/anibt/current` 指向当前版本。服务以独立用户 `anibt` 运行，通过 systemd credentials 读取配置；只有状态目录可写，媒体目录只读，禁止进程绑定端口。使用 `systemctl status anibt` 和 `journalctl -u anibt` 管理运行状态。
+
+部署前会备份数据库、配置、单元文件和版本指针。部署结果会给出备份路径。回滚命令：
+
+```bash
+python3 scripts/deploy.py rollback /opt/anibt/backups/<备份目录>
+```
+
+激活前可完整恢复快照。激活后同模式回滚保留实时数据库，避免重复执行已发出的下载或删除；首次从 Docker 迁入后不能自动回滚到旧状态，需修复原生版本或执行明确的反向状态迁移。备份包含凭证，应限制访问。
+
+### 从 v1 迁移
+
+先停止旧 Worker，使用 SQLite backup API 制作一致性快照。转换工具只用于这一次迁移，不参与正常运行。目标状态目录必须为空。
+
+```bash
+python3 scripts/convert-v1-config.py /旧目录/worker.env /root/anibt.env
+./anibt --config /root/anibt.env import-v1 /备份/v1.sqlite3
+python3 scripts/deploy.py apply dist/linux-amd64 --config /root/anibt.env
+```
+
+导入保留订阅初始化、发布历史、下载意图、做种暴露和成功媒体凭证。旧的错误来源拒绝不会导入为全局成功记录。确认新服务运行后，删除旧 Worker 容器和旧 mediainfo-agent 服务；保留受限备份。qBittorrent 无需迁出 Docker。
+
+## 无界面运维
+
+以下命令以 root 在生产主机执行，`--config` 必须位于子命令之前。
+
+```bash
+/opt/anibt/current/anibt --config /opt/anibt/current/worker.env status
+/opt/anibt/current/anibt --config /opt/anibt/current/worker.env check
+/opt/anibt/current/anibt --config /opt/anibt/current/worker.env queue media
+/opt/anibt/current/anibt --config /opt/anibt/current/worker.env retry media:<infohash>
+/opt/anibt/current/anibt --config /opt/anibt/current/worker.env cancel media:<infohash>
+/opt/anibt/current/anibt --config /opt/anibt/current/worker.env replay <release-id>
+/opt/anibt/current/anibt --config /opt/anibt/current/worker.env diagnose --hash <infohash> --probe
+```
+
+`queue` 最多显示 200 个任务，包含阶段、次数、下次运行时间与错误，不输出凭证和完整载荷。`retry` 保留去重语义；`replay` 明确重新准备一个仍保留来源信息的发布。正在领取或等待外部结果确认的任务不能直接覆盖。`cancel` 记录人工取消，不能撤销已发出的外部操作。
+
+对 qB 的「丢失文件」，先用 `diagnose` 检查文件存在性、大小、路径和共享关系。`--probe` 只分析一个实际媒体文件，不上传。缺失、大小冲突或共享所有权没有解决前，不自动删除或重下。文件已恢复后，停止 Worker 再执行：
+
+```bash
+/opt/anibt/current/anibt --config /opt/anibt/current/worker.env recover --hash <infohash> --recheck
+systemctl start anibt
+```
+
+`recover` 重新核验文件后只请求 qB 校验，不移动、覆盖或删除数据。
+
+## 验证与设计
+
+[领域术语](CONTEXT.md)、[架构决定](docs/adr/0001-native-worker.md)、[重构验证记录](docs/validation.md)。测试覆盖任务领取竞争、SQLite 取消、RSS 修正与条件请求、哈希去重、流量缺口、Telegram 重试、媒体进度、qB 协议和部署回滚。
