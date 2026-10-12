@@ -48,6 +48,7 @@ func ImportV1(ctx context.Context, c Config, source string) error {
 			`INSERT INTO feeds(slug,name,enabled,initialized,polled,error) SELECT slug,name,enabled,initialized,CAST(last_poll AS INTEGER),error FROM v1.feeds`,
 			`INSERT INTO receipts SELECT 'release',key,outcome,` + fmt.Sprint(now) + ` FROM v1.seen_keys WHERE outcome NOT IN ('group identity mismatch','excluded group','release too old')`,
 			`INSERT INTO receipts SELECT 'media',hash,'delivered',CAST(updated_at AS INTEGER) FROM v1.media WHERE status='done'`,
+			`INSERT OR IGNORE INTO receipts SELECT 'content',hash,'historical completed media',CAST(updated_at AS INTEGER) FROM v1.media WHERE status='done'`,
 			`INSERT INTO exposures SELECT hash,CAST(started_at AS INTEGER),CAST(last_started_at AS INTEGER) FROM v1.exposures`,
 			`INSERT INTO traffic SELECT CAST(ts-seconds AS INTEGER),CAST(ts AS INTEGER),CASE WHEN seconds<=90 THEN uploaded ELSE 0 END,CASE WHEN seconds<=90 THEN downloaded ELSE 0 END,seconds<=90 FROM v1.traffic WHERE seconds>0`,
 		}

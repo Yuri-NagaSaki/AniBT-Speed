@@ -32,6 +32,9 @@ func TestImportV1ReceiptsPendingAndOneTimeGuard(t *testing.T) {
 	if count(t, s, "SELECT count(*) FROM receipts WHERE kind='media'") != 1 || count(t, s, "SELECT count(*) FROM receipts WHERE key='poison'") != 0 || count(t, s, "SELECT count(*) FROM tasks WHERE lane='media' AND phase='upload' AND attempts=3") != 1 || count(t, s, "SELECT count(*) FROM tasks WHERE phase='tracking'") != 1 {
 		t.Fatal("migration lost identity or pending work")
 	}
+	if count(t, s, "SELECT count(*) FROM receipts WHERE kind='content' AND key='done'") != 1 {
+		t.Fatal("historical completed media lost content identity")
+	}
 	if count(t, s, "SELECT count(*) FROM traffic WHERE known=0 AND uploaded=0") != 1 {
 		t.Fatal("legacy unknown traffic imported as current")
 	}
