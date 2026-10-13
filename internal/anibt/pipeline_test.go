@@ -279,8 +279,8 @@ func TestMediaPathCorrectionFencesReaderAndKeepsOwnership(t *testing.T) {
 	if e = s.Transition(ctx, active, "upload", active.Resource, MediaWork{}, 0); !errors.Is(e, ErrStale) {
 		t.Fatal("old path result accepted", e)
 	}
-	must(t, s.Enqueue(ctx, "cleanup", h, "ready", "torrent:"+h, CleanupWork{Hash: h}))
-	del, e := s.Claim(ctx, "cleanup", []string{"ready"}, time.Minute)
+	must(t, s.Enqueue(ctx, "archive", h, "ready", "torrent:"+h, ArchiveWork{Hash: h}))
+	del, e := s.Claim(ctx, "archive", []string{"ready"}, time.Minute)
 	must(t, e)
 	if del != nil {
 		t.Fatal("invalidated reader resource released too early")

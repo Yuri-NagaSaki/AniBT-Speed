@@ -18,7 +18,7 @@ import (
 
 var Revision = "development"
 
-const Version = "2.0.0"
+const Version = "2.1.0"
 
 // Settlement writes only a retry result, never the cancelled operation's result.
 // It is synchronous and bounded; shutdown waits for it before releasing flock.

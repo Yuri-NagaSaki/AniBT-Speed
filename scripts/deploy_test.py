@@ -19,7 +19,7 @@ class DeploymentTest(unittest.TestCase):
         self.old.mkdir(parents=True)
         (self.old/'anibt').write_bytes(b'old binary')
         (self.old/'worker.env').write_text('old config')
-        (self.old/'manifest.json').write_text(json.dumps({'schema': 2, 'revision': 'a'*40}))
+        (self.old/'manifest.json').write_text(json.dumps({'schema': 3, 'revision': 'a'*40}))
         (self.old/'activate').write_text('a'*40)
         atomic_link(self.old, self.root/'current')
         self.unit.write_text('old unit')
@@ -28,7 +28,7 @@ class DeploymentTest(unittest.TestCase):
         self.artifact.mkdir()
         (self.artifact/'anibt').write_bytes(b'new binary')
         (self.artifact/'anibt.service').write_text('ExecStart=@ROOT@/current/anibt\nReadOnlyPaths=@MEDIA@')
-        (self.artifact/'manifest.json').write_text(json.dumps({'schema': 2, 'revision': 'b'*40}))
+        (self.artifact/'manifest.json').write_text(json.dumps({'schema': 3, 'revision': 'b'*40}))
         (self.artifact/'SHA256SUMS').write_text(''.join(hashlib.sha256((self.artifact/n).read_bytes()).hexdigest()+'  '+n+'\n' for n in ['anibt', 'anibt.service', 'manifest.json']))
         self.config = base/'config'
         self.config.write_text('ANIBT_STATE_DIR='+str(self.state))
@@ -80,6 +80,41 @@ class DeploymentTest(unittest.TestCase):
         self.deploy.run = run
         self.deploy.restore(backup)
         self.assertEqual((self.state/'state.sqlite3').read_bytes(), b'late external receipt')
+
+    def test_schema_upgrade_runs_after_backup_and_before_service_start(self):
+        self.deploy.wait_status = lambda *args: {'status': args[2]}
+        self.deploy.apply(self.artifact, self.config)
+        operations = [args for args in self.calls]
+        backup = next(i for i,a in enumerate(operations) if 'backup' in a)
+        upgrade = next(i for i,a in enumerate(operations) if 'upgrade-state' in a)
+        start = next(i for i,a in enumerate(operations) if a == ('systemctl','start','anibt.service'))
+        self.assertLess(backup, upgrade)
+        self.assertLess(upgrade, start)
+
+    def test_upgrade_failure_restores_previous_database(self):
+        original = self.deploy.run
+        def run(*args, check=True):
+            if 'upgrade-state' in args:
+                (self.state/'state.sqlite3').write_bytes(b'partial upgrade')
+                raise RuntimeError('upgrade failed')
+            return original(*args, check=check)
+        self.deploy.run = run
+        with self.assertRaises(RuntimeError):
+            self.deploy.apply(self.artifact, self.config)
+        self.assertEqual((self.state/'state.sqlite3').read_bytes(), b'old durable state')
+        self.assertEqual((self.root/'current').resolve(), self.old)
+
+    def test_activated_archive_schema_cannot_rollback_to_destructive_worker(self):
+        (self.old/'manifest.json').write_text(json.dumps({'schema': 2,'revision':'a'*40}))
+        candidate, manifest = self.deploy.stage(self.artifact, self.config)
+        backup = self.deploy.checkpoint(self.old, candidate, manifest['revision'])
+        atomic_link(candidate, self.root/'current')
+        (self.state/('effects-'+manifest['revision'])).write_text('archive active')
+        (self.state/'state.sqlite3').write_bytes(b'archive state')
+        with self.assertRaisesRegex(RuntimeError, 'incompatible'):
+            self.deploy.restore(backup)
+        self.assertEqual((self.state/'state.sqlite3').read_bytes(), b'archive state')
+        self.assertEqual((self.root/'current').resolve(), candidate)
 
     def test_bad_config_never_stops_existing_service(self):
         self.deploy.binary = Mock(side_effect=RuntimeError('invalid new config'))

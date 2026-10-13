@@ -55,25 +55,25 @@ func claim(t testing.TB, s *Store, lane string, phases ...string) Task {
 	}
 	return *v
 }
-func TestClaimFencesMediaAgainstCleanup(t *testing.T) {
+func TestClaimFencesMediaAgainstArchive(t *testing.T) {
 	s := testStore(t)
 	ctx := t.Context()
 	resource := "torrent:abc"
 	must(t, s.Enqueue(ctx, "media", "abc", "extract", resource, MediaWork{Hash: "abc"}))
 	m := claim(t, s, "media", "extract")
-	must(t, s.Enqueue(ctx, "cleanup", "abc", "ready", resource, CleanupWork{Hash: "abc"}))
-	c, e := s.Claim(ctx, "cleanup", []string{"ready"}, time.Minute)
+	must(t, s.Enqueue(ctx, "archive", "abc", "ready", resource, ArchiveWork{Hash: "abc"}))
+	c, e := s.Claim(ctx, "archive", []string{"ready"}, time.Minute)
 	must(t, e)
 	if c != nil {
-		t.Fatal("cleanup overlapped extraction")
+		t.Fatal("archive overlapped extraction")
 	}
 	must(t, s.Transition(ctx, m, "upload", resource, MediaWork{Hash: "abc"}, 0))
-	del := claim(t, s, "cleanup", "ready")
-	must(t, s.Transition(ctx, del, "verifying", resource, CleanupWork{Hash: "abc"}, 0))
+	del := claim(t, s, "archive", "ready")
+	must(t, s.Transition(ctx, del, "verifying", resource, ArchiveWork{Hash: "abc"}, 0))
 	next, e := s.Claim(ctx, "media", []string{"upload"}, time.Minute)
 	must(t, e)
 	if next != nil {
-		t.Fatal("media started while delete awaited reconciliation")
+		t.Fatal("media started while archive awaited reconciliation")
 	}
 	if !errors.Is(s.Finish(ctx, m, "media", "abc", "delivered", ""), ErrStale) {
 		t.Fatal("stale media writer committed")
@@ -266,5 +266,16 @@ func TestOperatorReplayKeepsPermanentContentReceipt(t *testing.T) {
 	}
 	if count(t, s, "SELECT count(*) FROM meta WHERE key=?", "replay:"+d.Key) != 0 {
 		t.Fatal("replay permission not consumed")
+	}
+}
+
+func TestArchiveQueueNeverResumesClaimedTorrent(t *testing.T) {
+	s := testStore(t)
+	h := "hash"
+	must(t, s.Enqueue(t.Context(), "archive", h, "ready", "torrent:"+h, ArchiveWork{Hash: h}))
+	ts, e := s.WithoutArchiving(t.Context(), map[string]Torrent{h: {Hash: h}, "other": {Hash: "other"}})
+	must(t, e)
+	if len(ts) != 1 || ts["other"].Hash != "other" {
+		t.Fatal("archival torrent leaked into rotation plan")
 	}
 }

@@ -124,8 +124,8 @@ func (q *QBT) Execute(ctx context.Context, c Command) error {
 	switch c.Kind {
 	case "start", "stop":
 		_, e = q.form(ctx, "torrents/"+c.Kind, url.Values{"hashes": {strings.Join(c.Hashes, "|")}})
-	case "delete":
-		_, e = q.form(ctx, "torrents/delete", url.Values{"hashes": {strings.Join(c.Hashes, "|")}, "deleteFiles": {"true"}})
+	case "archive":
+		_, e = q.form(ctx, "torrents/delete", url.Values{"hashes": {strings.Join(c.Hashes, "|")}, "deleteFiles": {"false"}})
 	case "category":
 		_, e = q.form(ctx, "torrents/createCategory", url.Values{"category": {q.c.Category}, "savePath": {q.c.QBTRoot}})
 	case "upload", "download":

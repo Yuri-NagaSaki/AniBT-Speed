@@ -18,7 +18,7 @@ func TestWorkerSingleOwnerAndGracefulShutdown(t *testing.T) {
 	c.Media = false
 	c.Notify = false
 	c.Pool = false
-	c.Cleanup = false
+	c.Archive = false
 	c.ControlInterval = time.Second
 	c.ControlBudget = time.Second
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +70,7 @@ func TestWorkerSingleOwnerAndGracefulShutdown(t *testing.T) {
 func TestStrictConfiguration(t *testing.T) {
 	c := testConfig(t)
 	_ = c
-	for _, value := range []string{"QBT_URL=http://localhost\n", "OBSOLETE_API_TOKEN=old\n", "ANIBT_UNKNOWN=true\n", "ANIBT_MEDIA_SAMPLES=0\n", "ANIBT_MIN_FREE_GIB=NaN\n", "ANIBT_CONTROL_INTERVAL=30\n"} {
+	for _, value := range []string{"QBT_URL=http://localhost\n", "OBSOLETE_API_TOKEN=old\n", "ANIBT_UNKNOWN=true\n", "ANIBT_MEDIA_SAMPLES=0\n", "ANIBT_MIN_FREE_GIB=NaN\n", "ANIBT_CONTROL_INTERVAL=30\n", "ANIBT_CLEANUP_ENABLED=true\n", "ANIBT_RETAIN_DAYS=90\n"} {
 		file := filepath.Join(t.TempDir(), "env")
 		must(t, os.WriteFile(file, []byte(value), 0600))
 		if _, e := LoadConfig(file); e == nil {

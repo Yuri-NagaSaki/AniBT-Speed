@@ -136,41 +136,25 @@ func PlanQueue(ts map[string]Torrent, c Config, ex map[string]Exposure, now int6
 	}
 	return out
 }
-func PlanCleanup(ts map[string]Torrent, c Config, pressure bool, now int64) []Torrent {
-	if !c.Cleanup || c.CleanupBatch == 0 {
+
+// Archive eligibility is based only on completed seeding age, never disk pressure.
+// Shared paths are safe because qB is instructed to retain every content file.
+func PlanArchive(ts map[string]Torrent, c Config, now int64) []Torrent {
+	if !c.Archive || c.ArchiveBatch == 0 || c.ArchiveAfterDays == 0 {
 		return nil
 	}
-	shared := SharedContent(ts)
 	var eligible []Torrent
-	// An unknown content root could own a candidate's files. Fail closed until
-	// qB metadata has converged; do not guess an ownership proof.
 	for _, t := range ts {
-		if t.ContentPath == "" || !path.IsAbs(t.ContentPath) || path.Clean(t.ContentPath) != t.ContentPath {
-			return nil
-		}
-	}
-	for h, t := range ts {
-		if shared[h] || !t.Managed(c) || !within(c.QBTRoot, t.ContentPath) || !within(t.SavePath, t.ContentPath) || t.ContentPath == c.QBTRoot || !t.Complete() || t.State == "forcedUP" || t.Demand() || t.Age(now) < c.Protect {
+		if !t.Managed(c) || !within(c.QBTRoot, t.ContentPath) || !within(t.SavePath, t.ContentPath) || t.ContentPath == c.QBTRoot || !t.Complete() || t.State == "forcedUP" || t.Demand() || t.Age(now) < time.Duration(c.ArchiveAfterDays)*24*time.Hour {
 			continue
 		}
-		if pressure || (c.RetainDays > 0 && t.Age(now) >= time.Duration(c.RetainDays)*24*time.Hour) {
-			eligible = append(eligible, t)
-		}
+		eligible = append(eligible, t)
 	}
 	slices.SortFunc(eligible, func(a, b Torrent) int {
-		if pressure {
-			if x := cmp.Compare(b.Ratio, a.Ratio); x != 0 {
-				return x
-			}
-		}
 		if x := cmp.Compare(a.CompletedAt, b.CompletedAt); x != 0 {
 			return x
 		}
 		return cmp.Compare(a.Hash, b.Hash)
 	})
-	n := c.CleanupBatch
-	if pressure {
-		n = 1
-	}
-	return eligible[:min(n, len(eligible))]
+	return eligible[:min(c.ArchiveBatch, len(eligible))]
 }

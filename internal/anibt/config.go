@@ -48,11 +48,10 @@ type Config struct {
 	RotationInterval time.Duration `env:"ROTATION_INTERVAL" default:"3m"`
 	Exposure         time.Duration `env:"EXPOSURE" default:"10m"`
 	Hot              time.Duration `env:"HOT_WINDOW" default:"12h"`
-	Cleanup          bool          `env:"CLEANUP_ENABLED" default:"true"`
-	CleanupInterval  time.Duration `env:"CLEANUP_INTERVAL" default:"5m"`
-	CleanupBatch     int           `env:"CLEANUP_BATCH" default:"5"`
-	Protect          time.Duration `env:"CLEANUP_PROTECT" default:"8h"`
-	RetainDays       int           `env:"RETAIN_DAYS" default:"90"`
+	Archive          bool          `env:"ARCHIVE_ENABLED" default:"true"`
+	ArchiveInterval  time.Duration `env:"ARCHIVE_INTERVAL" default:"5m"`
+	ArchiveBatch     int           `env:"ARCHIVE_BATCH" default:"5"`
+	ArchiveAfterDays int           `env:"ARCHIVE_AFTER_DAYS" default:"90"`
 	MinFreeGiB       float64       `env:"MIN_FREE_GIB" default:"100"`
 	MaxDiskPercent   float64       `env:"MAX_DISK_PERCENT" default:"85"`
 	Rate             bool          `env:"RATE_ENABLED" default:"false"`
@@ -160,8 +159,8 @@ func (c Config) Validate() error {
 			return fmt.Errorf("non-finite setting")
 		}
 	}
-	if c.Cleanup && c.Commands < 5 {
-		return fmt.Errorf("cleanup requires at least five control commands")
+	if c.Archive && c.Commands < 6 {
+		return fmt.Errorf("archive requires at least six control commands")
 	}
 
 	for _, s := range []string{c.QBTURL, c.APIRoot} {
@@ -193,7 +192,7 @@ func (c Config) Validate() error {
 	if c.PoolTarget < 1 || c.PoolBatch < 0 || c.PoolBatch > 1000 || c.RotationBatch < 0 || c.RotationBatch > 1000 || c.RotationInterval < time.Second || c.Exposure < 0 || c.Hot < 0 {
 		return fmt.Errorf("invalid pool settings")
 	}
-	if c.CleanupInterval < time.Second || c.CleanupBatch < 0 || c.CleanupBatch > 100 || c.Protect < 0 || c.RetainDays < 0 || c.HistoryDays < 2 || c.MinFreeGiB < 0 || c.MaxDiskPercent <= 0 || c.MaxDiskPercent > 100 {
+	if c.ArchiveInterval < time.Second || c.ArchiveBatch < 0 || c.ArchiveBatch > 100 || c.ArchiveAfterDays < 0 || c.HistoryDays < 2 || c.MinFreeGiB < 0 || c.MaxDiskPercent <= 0 || c.MaxDiskPercent > 100 {
 		return fmt.Errorf("invalid retention settings")
 	}
 	if c.MediaSamples < 1 || c.MediaSamples > 20 || c.MediaTimeout < time.Second || c.MediaTimeout > 2*time.Minute || c.MediaInterval < time.Second || c.MediaMemoryMiB < 64 || c.MediaMemoryMiB > 2048 || c.MediaIOPressure < 0 || c.MediaIOPressure > 100 {

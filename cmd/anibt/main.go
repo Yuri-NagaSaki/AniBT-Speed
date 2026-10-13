@@ -36,7 +36,7 @@ func mainE() error {
 	}
 	args := flags.Args()
 	if len(args) == 0 {
-		return fmt.Errorf("usage: anibt [--config FILE] run|status|check|queue|retry|replay|cancel|diagnose|recover|backup|import-v1|version")
+		return fmt.Errorf("usage: anibt [--config FILE] run|status|check|queue|archives|retry|replay|cancel|diagnose|recover|backup|import-v1|upgrade-state|version")
 	}
 	if args[0] == "version" {
 		return printJSON(map[string]string{"version": app.Version, "revision": app.Revision})
@@ -83,6 +83,8 @@ func mainE() error {
 			return e
 		}
 		return printJSON(map[string]any{"revision": app.Revision, "preflight": "passed", "torrents": len(snap.Torrents)})
+	case "upgrade-state":
+		return app.UpgradeState(ctx, c)
 	case "import-v1":
 		if len(args) != 2 {
 			return fmt.Errorf("import-v1 requires an offline v1 SQLite snapshot")
@@ -102,6 +104,12 @@ func mainE() error {
 	}
 	defer s.Close()
 	switch args[0] {
+	case "archives":
+		records, e := s.Archives(ctx)
+		if e != nil {
+			return e
+		}
+		return printJSON(records)
 	case "queue":
 		lane := ""
 		if len(args) > 1 {

@@ -64,7 +64,7 @@ func TestQBTRejectsWrongAckAndNeverMutatesReadonly(t *testing.T) {
 		t.Fatal("wrong hash accepted")
 	}
 	q.ReadOnly = true
-	if q.Execute(t.Context(), Command{Kind: "delete", Hashes: []string{"x"}}) == nil || calls != 1 {
+	if q.Execute(t.Context(), Command{Kind: "archive", Hashes: []string{"x"}}) == nil || calls != 1 {
 		t.Fatal("preflight issued a mutation")
 	}
 }
@@ -93,4 +93,26 @@ func FuzzTorrentNeverPanics(f *testing.F) {
 		}
 		TorrentIdentity(b)
 	})
+}
+
+func TestQBTArchiveIsTheOnlyRemovalAndNeverDeletesFiles(t *testing.T) {
+	c := testConfig(t)
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		r.ParseForm()
+		if r.URL.Path != "/api/v2/torrents/delete" || r.Form.Get("deleteFiles") != "false" {
+			t.Error("destructive removal request", r.URL.Path, r.Form)
+		}
+	}))
+	defer server.Close()
+	c.QBTURL = server.URL
+	q := NewQBT(c, false)
+	if q.Execute(t.Context(), Command{Kind: "delete", Hashes: []string{strings.Repeat("a", 40)}}) == nil || calls != 0 {
+		t.Fatal("obsolete destructive command accepted")
+	}
+	must(t, q.Execute(t.Context(), Command{Kind: "archive", Hashes: []string{strings.Repeat("a", 40)}}))
+	if calls != 1 {
+		t.Fatal(calls)
+	}
 }

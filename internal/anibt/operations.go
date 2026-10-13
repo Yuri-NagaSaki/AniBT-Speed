@@ -48,7 +48,7 @@ func (s *Store) Operate(ctx context.Context, action, key string) error {
 		if t.Lease > now {
 			return fmt.Errorf("task is currently claimed")
 		}
-		if t.Phase == "submitted" || (t.Lane == "cleanup" && t.Phase == "verifying") {
+		if t.Phase == "submitted" || (t.Lane == "archive" && t.Phase == "verifying") {
 			return fmt.Errorf("external effect must be reconciled before operator changes")
 		}
 		if action == "cancel" {
@@ -100,8 +100,19 @@ func (s *Store) Operate(ctx context.Context, action, key string) error {
 						return e
 					}
 				}
-			case "cleanup":
+			case "archive":
+				var w ArchiveWork
+				if json.Unmarshal(t.Data, &w) != nil {
+					return fmt.Errorf("invalid archive task")
+				}
 				phase = "ready"
+				if w.Requested > 0 && len(w.Files) > 0 {
+					phase = "verifying"
+				}
+				w.Submissions = 0
+				if _, e := tx.ExecContext(ctx, "UPDATE tasks SET data=? WHERE id=?", encode(w), key); e != nil {
+					return e
+				}
 			case "notify":
 				phase = "send"
 			default:
@@ -121,5 +132,5 @@ func (s *Store) replayAllowed(ctx context.Context, tx *sql.Tx, key string) (bool
 	return n > 0, e
 }
 func validLane(lane string) bool {
-	return strings.Contains("|download|media|cleanup|notify|", "|"+lane+"|")
+	return strings.Contains("|download|media|archive|notify|", "|"+lane+"|")
 }

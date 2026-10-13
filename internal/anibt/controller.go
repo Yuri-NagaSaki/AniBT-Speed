@@ -2,10 +2,10 @@ package anibt
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"path"
-	"slices"
 	"sync"
 	"syscall"
 	"time"
@@ -16,7 +16,7 @@ type Controller struct {
 	s                         *Store
 	q                         *QBT
 	previous                  map[string]Torrent
-	lastCleanup, lastRotation time.Time
+	lastArchive, lastRotation time.Time
 	cursor                    int
 	mu                        sync.Mutex
 	summary                   map[string]any
@@ -41,7 +41,7 @@ func (c *Controller) publish(snap Snapshot) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.summary = map[string]any{"observed_at": snap.At, "torrents": len(snap.Torrents), "states": states, "upload_bytes_per_second": snap.Server["up_info_speed"], "download_bytes_per_second": snap.Server["dl_info_speed"], "http_requests": c.q.Requests, "http_failures": c.q.Failures, "response_bytes": c.q.Bytes, "full_updates": c.q.Full, "delta_updates": c.q.Delta}
+	c.summary = map[string]any{"observed_at": snap.At, "torrents": len(snap.Torrents), "states": states, "upload_bytes_per_second": snap.Server["up_info_speed"], "download_bytes_per_second": snap.Server["dl_info_speed"], "http_requests": c.q.Requests, "http_failures": c.q.Failures, "response_bytes": c.q.Bytes, "full_updates": c.q.Full, "delta_updates": c.q.Delta, "storage_pressure": pressure(c.c, snap), "intake_paused": pressure(c.c, snap)}
 }
 func pressure(c Config, s Snapshot) bool {
 	var st syscall.Statfs_t
@@ -79,22 +79,22 @@ func (c *Controller) Cycle(ctx context.Context) error {
 			return e
 		}
 	}
-	if e = c.reconcileCleanup(ctx, snap); e != nil {
+	if e = c.reconcileArchives(ctx, snap); e != nil {
 		return e
 	}
-	if !c.c.Cleanup || c.c.CleanupBatch == 0 {
-		if _, e := c.s.db.ExecContext(ctx, "DELETE FROM tasks WHERE lane='cleanup' AND phase<>'verifying'"); e != nil {
+	if !c.c.Archive || c.c.ArchiveBatch == 0 || c.c.ArchiveAfterDays == 0 {
+		if _, e := c.s.db.ExecContext(ctx, "DELETE FROM tasks WHERE lane='archive' AND phase<>'verifying'"); e != nil {
 			return e
 		}
 	}
 	storagePressure := pressure(c.c, snap)
-	if time.Since(c.lastCleanup) >= c.c.CleanupInterval {
-		for _, t := range PlanCleanup(snap.Torrents, c.c, storagePressure, snap.At) {
-			if e = c.s.Enqueue(ctx, "cleanup", t.Hash, "ready", "torrent:"+t.Hash, CleanupWork{Hash: t.Hash}); e != nil {
+	if time.Since(c.lastArchive) >= c.c.ArchiveInterval {
+		for _, t := range PlanArchive(snap.Torrents, c.c, snap.At) {
+			if e = c.s.Enqueue(ctx, "archive", t.Hash, "ready", "torrent:"+t.Hash, ArchiveWork{Hash: t.Hash}); e != nil {
 				return e
 			}
 		}
-		c.lastCleanup = time.Now()
+		c.lastArchive = time.Now()
 	}
 	start := c.q.Requests
 	rotate := time.Since(c.lastRotation) >= c.c.RotationInterval
@@ -112,7 +112,11 @@ func (c *Controller) Cycle(ctx context.Context) error {
 			}
 		}
 	}
-	for _, cmd := range PlanQueue(snap.Torrents, c.c, ex, snap.At, rotate) {
+	queueTorrents, e := c.s.WithoutArchiving(ctx, snap.Torrents)
+	if e != nil {
+		return e
+	}
+	for _, cmd := range PlanQueue(queueTorrents, c.c, ex, snap.At, rotate) {
 		if c.q.Requests-start >= int64(c.c.Commands) {
 			break
 		}
@@ -125,10 +129,10 @@ func (c *Controller) Cycle(ctx context.Context) error {
 	}
 	// One operation per class on each pass. Each HTTP call counts against the
 	// same budget, including manifests and deletion revalidation.
-	phases := []string{"download", "cleanup", "manifest"}
+	phases := []string{"download", "archive", "manifest"}
 	phases = append(phases[c.cursor:], phases[:c.cursor]...)
 	c.cursor = (c.cursor + 1) % 3
-	added, cleaned := 0, 0
+	added, archived := 0, 0
 	for c.q.Requests-start < int64(c.c.Commands) {
 		worked := false
 		for _, phase := range phases {
@@ -145,14 +149,11 @@ func (c *Controller) Cycle(ctx context.Context) error {
 						added++
 					}
 				}
-			case "cleanup":
-				if left >= 3 && cleaned < c.c.CleanupBatch {
-					did, e = c.cleanup(ctx, snap)
+			case "archive":
+				if left >= 4 && archived < c.c.ArchiveBatch {
+					did, e = c.archive(ctx)
 					if did {
-						cleaned++
-						if storagePressure {
-							cleaned = c.c.CleanupBatch
-						}
+						archived++
 					}
 				}
 			case "manifest":
@@ -212,6 +213,15 @@ func (c *Controller) manifest(ctx context.Context, snap Snapshot) (bool, error) 
 		return false, e
 	}
 	torrent, ok := snap.Torrents[t.Key]
+	if !ok {
+		archived, err := c.s.ArchivedMedia(ctx, t.Key)
+		if err == nil {
+			return true, c.s.Transition(ctx, *t, "extract", t.Resource, archived, 0)
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return true, err
+		}
+	}
 	if !ok || !torrent.Managed(c.c) || !torrent.Complete() {
 		e = fmt.Errorf("torrent unavailable for media manifest")
 		settle(func(cx context.Context) error { return c.s.Retry(cx, *t, e, 5*time.Minute) })
@@ -256,73 +266,4 @@ func (c *Controller) rate(ctx context.Context, snap Snapshot) ([]Command, error)
 		out = append(out, Command{Kind: "download", Limit: d})
 	}
 	return out, nil
-}
-
-type CleanupWork struct {
-	Submissions int    `json:"submissions"`
-	Hash        string `json:"hash"`
-	Requested   int64  `json:"requested"`
-}
-
-func (c *Controller) cleanup(ctx context.Context, snap Snapshot) (bool, error) {
-	t, e := c.s.Claim(ctx, "cleanup", []string{"ready"}, time.Minute)
-	if e != nil || t == nil {
-		return false, e
-	}
-	fail := func(err error) (bool, error) {
-		settle(func(cx context.Context) error { return c.s.Retry(cx, *t, err, time.Minute) })
-		return true, err
-	}
-	itemFail := func(err error) (bool, error) {
-		settle(func(cx context.Context) error { return c.s.Retry(cx, *t, err, time.Minute) })
-		return true, nil
-	}
-	// Refresh while holding exclusive resource ownership. The deletion and media
-	// extraction cannot overlap, including their HTTP/subprocess wait periods.
-	fresh, e := c.q.Snapshot(ctx)
-	if e != nil {
-		return fail(e)
-	}
-	candidates := PlanCleanup(fresh.Torrents, c.c, pressure(c.c, fresh), fresh.At)
-	index := slices.IndexFunc(candidates, func(x Torrent) bool { return x.Hash == t.Key })
-	if index < 0 {
-		return true, c.s.Finish(ctx, *t, "", "", "", "")
-	}
-	target := candidates[index]
-	files, e := c.q.Files(ctx, t.Key)
-	if e != nil {
-		return fail(e)
-	}
-	for _, file := range files {
-		if e = ctx.Err(); e != nil {
-			return fail(e)
-		}
-		actual := path.Join(target.SavePath, file.Name)
-		if !within(target.ContentPath, actual) {
-			return itemFail(fmt.Errorf("cleanup file manifest escapes content root"))
-		}
-		f, e := OpenMedia(c.c, target.SavePath, file.Name)
-		if e != nil {
-			return itemFail(fmt.Errorf("cleanup ownership proof: missing or unsafe file"))
-		}
-		st, err := f.Stat()
-		f.Close()
-		if err != nil || st.Size() != file.Size {
-			return itemFail(fmt.Errorf("cleanup ownership proof: file size mismatch"))
-		}
-	}
-	var w CleanupWork
-	if e = json.Unmarshal(t.Data, &w); e != nil {
-		return itemFail(fmt.Errorf("invalid cleanup work"))
-	}
-	w.Hash = t.Key
-	w.Requested = time.Now().Unix()
-	w.Submissions++
-	if e = c.s.Transition(ctx, *t, "verifying", t.Resource, w, 0); e != nil {
-		return true, e
-	}
-	// The durable cleanup task reserves this resource until a later snapshot
-	// proves absence. A timeout leaves the command ambiguous, not retried blindly.
-	e = c.q.Execute(ctx, Command{Kind: "delete", Hashes: []string{t.Key}})
-	return true, e
 }

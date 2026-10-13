@@ -65,7 +65,7 @@ class Deployment:
                 raise ValueError('artifact checksum mismatch: '+name)
         manifest = json.loads((artifact/'manifest.json').read_text())
         revision = manifest['revision']
-        if not re.fullmatch('[0-9a-f]{40}', revision) or manifest['schema'] != 2:
+        if not re.fullmatch('[0-9a-f]{40}', revision) or manifest['schema'] != 3:
             raise ValueError('unsupported build manifest')
         destination = self.root/'releases'/revision
         if destination.exists():
@@ -95,7 +95,7 @@ class Deployment:
         backup = self.root/'backups'/(time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())+'-'+revision[:10])
         backup.mkdir(parents=True, mode=0o700)
         meta = {'previous': str(previous) if previous else None, 'candidate': str(candidate),
-                'revision': revision, 'had_unit': self.unit.exists(), 'schema': 2}
+                'revision': revision, 'had_unit': self.unit.exists(), 'schema': json.loads((candidate/'manifest.json').read_text())['schema']}
         if self.unit.exists():
             shutil.copy2(self.unit, backup/'anibt.service')
         if previous:
@@ -179,6 +179,8 @@ class Deployment:
             raise
         try:
             self.state.mkdir(parents=True, exist_ok=True, mode=0o700)
+            if (self.state/'state.sqlite3').exists():
+                self.binary(candidate, 'upgrade-state')
             self.ownership()
             shutil.copy2(candidate/'installed.service', self.unit)
             atomic_link(candidate, self.current)

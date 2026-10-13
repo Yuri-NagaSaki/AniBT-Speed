@@ -32,7 +32,7 @@ func TestPathOwnershipPermutation(t *testing.T) {
 		}
 	}
 }
-func TestCleanupProtectionAndPressureOne(t *testing.T) {
+func TestArchivePolicyPreservesActiveAndProtectedTorrents(t *testing.T) {
 	c := testConfig(t)
 	now := time.Now().Unix()
 	ts := map[string]Torrent{}
@@ -40,23 +40,32 @@ func TestCleanupProtectionAndPressureOne(t *testing.T) {
 		h := fmt.Sprintf("%040x", i)
 		ts[h] = Torrent{Hash: h, Name: "Show", Category: c.Category, SavePath: c.QBTRoot + "/" + h, ContentPath: c.QBTRoot + "/" + h + "/file.mkv", Progress: 1, State: "stoppedUP", CompletedAt: now - 100*86400}
 	}
-	first := fmt.Sprintf("%040x", 0)
-	x := ts[first]
-	x.Tags = "keep"
-	ts[first] = x
-	second := fmt.Sprintf("%040x", 1)
-	x = ts[second]
-	x.State = "forcedUP"
-	ts[second] = x
-	if v := PlanCleanup(ts, c, true, now); len(v) != 1 || v[0].Hash == first || v[0].Hash == second {
-		t.Fatal(v)
+	excluded := map[int]func(*Torrent){0: func(t *Torrent) { t.Tags = "keep" }, 1: func(t *Torrent) { t.State = "forcedUP" }, 2: func(t *Torrent) { t.UpSpeed = 1 }, 3: func(t *Torrent) { t.Leechers = 1 }, 4: func(t *Torrent) { t.Progress = 0.9; t.State = "downloading" }, 5: func(t *Torrent) { t.CompletedAt = 0 }, 6: func(t *Torrent) { t.CompletedAt = now - 89*86400 }}
+	for i, change := range excluded {
+		h := fmt.Sprintf("%040x", i)
+		x := ts[h]
+		change(&x)
+		ts[h] = x
 	}
-	if v := PlanCleanup(ts, c, false, now); len(v) != c.CleanupBatch {
-		t.Fatal(v)
+	plan := PlanArchive(ts, c, now)
+	if len(plan) != 3 {
+		t.Fatal(plan)
 	}
+	for _, x := range plan {
+		for i := range excluded {
+			if x.Hash == fmt.Sprintf("%040x", i) {
+				t.Fatal("protected torrent archived", x)
+			}
+		}
+	}
+	// A foreign shared root cannot be harmed: archives never delete data.
 	ts["foreign"] = Torrent{ContentPath: c.QBTRoot}
-	if len(PlanCleanup(ts, c, true, now)) != 0 {
-		t.Fatal("foreign parent not protected")
+	if len(PlanArchive(ts, c, now)) != 3 {
+		t.Fatal("unrelated shared path blocked safe archive")
+	}
+	c.ArchiveAfterDays = 0
+	if len(PlanArchive(ts, c, now)) != 0 {
+		t.Fatal("zero days must disable age archival")
 	}
 }
 func TestQueuePreservesDemandAndExposure(t *testing.T) {

@@ -18,7 +18,7 @@ import (
 
 const schema = `
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
-INSERT OR IGNORE INTO meta VALUES('schema','2');
+INSERT OR IGNORE INTO meta VALUES('schema','3');
 CREATE TABLE IF NOT EXISTS feeds(slug TEXT PRIMARY KEY,name TEXT NOT NULL,enabled INTEGER NOT NULL,initialized INTEGER NOT NULL DEFAULT 0,etag TEXT NOT NULL DEFAULT '',modified TEXT NOT NULL DEFAULT '',polled INTEGER NOT NULL DEFAULT 0,error TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS sources(key TEXT PRIMARY KEY,slug TEXT NOT NULL,fingerprint TEXT NOT NULL,data BLOB NOT NULL,updated INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS rejected(slug TEXT NOT NULL,key TEXT NOT NULL,reason TEXT NOT NULL,updated INTEGER NOT NULL,PRIMARY KEY(slug,key));
@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY,lane TEXT NOT NULL,key TEXT
 CREATE INDEX IF NOT EXISTS tasks_due ON tasks(lane,phase,due,updated);
 CREATE TABLE IF NOT EXISTS owners(resource TEXT PRIMARY KEY,token TEXT NOT NULL,until INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS receipts(kind TEXT NOT NULL,key TEXT NOT NULL,outcome TEXT NOT NULL,at INTEGER NOT NULL,PRIMARY KEY(kind,key));
+CREATE TABLE IF NOT EXISTS archives(hash TEXT PRIMARY KEY,name TEXT NOT NULL,save_path TEXT NOT NULL,files BLOB NOT NULL,archived_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS archives_time ON archives(archived_at);
 CREATE TABLE IF NOT EXISTS exposures(hash TEXT PRIMARY KEY,started INTEGER NOT NULL,last INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS traffic(start INTEGER NOT NULL,end INTEGER NOT NULL,uploaded INTEGER NOT NULL,downloaded INTEGER NOT NULL,known INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS traffic_end ON traffic(end);
@@ -83,8 +85,8 @@ func OpenStore(file string, notify bool, maxAttempts int) (*Store, error) {
 	if e == nil && exists > 0 {
 		var ver string
 		e = db.QueryRowContext(ctx, "SELECT value FROM meta WHERE key='schema'").Scan(&ver)
-		if e == nil && ver != "2" {
-			e = fmt.Errorf("unsupported state schema; use explicit import-v1 into a new state directory")
+		if e == nil && ver != "3" {
+			e = fmt.Errorf("unsupported state schema; use upgrade-state for v2 or import-v1 into a new state directory")
 		}
 	}
 	if e == nil {
@@ -162,7 +164,7 @@ func (s *Store) Claim(ctx context.Context, lane string, phases []string, ttl tim
 			args = append(args, p)
 		}
 		args = append(args, now)
-		t, e := scanTask(tx.QueryRowContext(ctx, "SELECT "+taskColumns+" FROM tasks WHERE lane=? AND due<=? AND lease<=? AND phase IN ("+strings.Join(marks, ",")+") AND NOT EXISTS(SELECT 1 FROM owners WHERE owners.resource=tasks.resource AND owners.until>?) AND (lane='cleanup' OR NOT EXISTS(SELECT 1 FROM tasks AS deleting WHERE deleting.lane='cleanup' AND deleting.phase<>'blocked' AND deleting.resource=tasks.resource)) ORDER BY due,updated,id LIMIT 1", args...))
+		t, e := scanTask(tx.QueryRowContext(ctx, "SELECT "+taskColumns+" FROM tasks WHERE lane=? AND due<=? AND lease<=? AND phase IN ("+strings.Join(marks, ",")+") AND NOT EXISTS(SELECT 1 FROM owners WHERE owners.resource=tasks.resource AND owners.until>?) AND (lane='archive' OR NOT EXISTS(SELECT 1 FROM tasks AS archiving WHERE archiving.lane='archive' AND archiving.phase='verifying' AND archiving.resource=tasks.resource)) ORDER BY due,updated,id LIMIT 1", args...))
 		if errors.Is(e, sql.ErrNoRows) {
 			return nil
 		}
