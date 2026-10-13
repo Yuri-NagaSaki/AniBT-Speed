@@ -24,7 +24,7 @@ type Config struct {
 	MediaRoot        string        `env:"MEDIA_ROOT" default:"/hdd/media/AniBT"`
 	Category         string        `env:"CATEGORY" default:"AniBT"`
 	ExcludedTags     string        `env:"PROTECTED_TAGS" default:"keep"`
-	ExcludedGroups   string        `env:"EXCLUDED_GROUPS" default:"kirara-fantasia,ani,zzz123,pre-s,silent-workshop,geckyzz"`
+	ExcludedGroups   string        `env:"EXCLUDED_GROUPS" default:"kirara-fantasia,ani,zzz123,pre-s,silent-workshop,geckyzz,toonshub"`
 	ControlInterval  time.Duration `env:"CONTROL_INTERVAL" default:"30s"`
 	ControlBudget    time.Duration `env:"CONTROL_BUDGET" default:"20s"`
 	Commands         int           `env:"CONTROL_COMMANDS" default:"8"`
